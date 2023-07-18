@@ -1,6 +1,6 @@
 Focused: “write me a focused meditation script designed to enhance focus and attention by noticing all 5 senses”
 
-Body Scan: “write me a body scan meditation script to relax and relieve stress by tightening and relaxing muscles”"
+Body Scan: “write me a body scan meditation script to relax and relieve stress by tightening and relaxing muscles"
 
 Visualization: “write me a visualization meditation script noticing all 5 senses at the beach/garden and is designed to boost mood, reduce stress, and promote inner peace”
 
