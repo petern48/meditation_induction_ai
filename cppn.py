@@ -31,6 +31,7 @@ def load_args():
     parser.add_argument('--name_style', default='params', type=str, help='output fn')
     parser.add_argument('--walk', action='store_true', help='interpolate')
     parser.add_argument('--sample', action='store_true', help='sample n images')
+    parser.add_argument('--audio_file', default='', type=str, help='(optional) audio file input')
 
     args = parser.parse_args()
     return args
@@ -51,20 +52,23 @@ class Generator(nn.Module):
         self.linear_out = nn.Linear(self.net, self.c_dim)
         self.sigmoid = nn.Sigmoid()
 
+        
     def forward(self, inputs):
-        x, y, z, r = inputs
-        n_points = self.x_dim * self.y_dim
-        ones = torch.ones(n_points, 1, dtype=torch.float)
+        x, y, z, r = inputs  # The following shapes are for 256x256
+        print('x.shape', x.shape)  # ([1,65536, 1])
+        print('y.shape', y.shape)
+        n_points = self.x_dim * self.y_dim  # 256 * 256 = 65536
+        ones = torch.ones(n_points, 1, dtype=torch.float)  # [.shape 65536,1]
+        print('z.shape', z.shape)
         z_scaled = z.view(self.batch_size, 1, self.z) * ones * self.scale
-        z_pt = self.linear_z(z_scaled.view(self.batch_size*n_points, self.z))
+        print('z_scaled', z_scaled.shape)
+        z_pt = self.linear_z(z_scaled.view(self.batch_size*n_points, self.z))  # torch.tensor.view change shape
         x_pt = self.linear_x(x.view(self.batch_size*n_points, -1))
         y_pt = self.linear_y(y.view(self.batch_size*n_points, -1))
         r_pt = self.linear_r(r.view(self.batch_size*n_points, -1))
         U = z_pt + x_pt + y_pt + r_pt
         H = torch.tanh(U)
-        # ometimes dies below. Dies in random lines
         x = self.linear_h(H)
-        # HERE: Sometimes Killed in F.elu function. 
         H = F.elu(x)
         H = F.softplus(self.linear_h(H))
         H = torch.tanh(self.linear_h(H))
@@ -76,24 +80,25 @@ class Generator(nn.Module):
 
 def coordinates(args):
     x_dim, y_dim, scale = args.x_dim, args.y_dim, args.scale
-    n_points = x_dim * y_dim
-    x_range = scale*(np.arange(x_dim)-(x_dim-1)/2.0)/(x_dim-1)/0.5
-    y_range = scale*(np.arange(y_dim)-(y_dim-1)/2.0)/(y_dim-1)/0.5
+    n_points = x_dim * y_dim  # total number of points in 2D space
+    x_range = scale*(np.arange(x_dim)-(x_dim-1)/2.0)/(x_dim-1)/0.5  # (256,)  for 256x256
+    # ^ Evenly spaced values
+    y_range = scale*(np.arange(y_dim)-(y_dim-1)/2.0)/(y_dim-1)/0.5  # (256,)
     x_mat = np.matmul(np.ones((y_dim, 1)), x_range.reshape((1, x_dim)))
     y_mat = np.matmul(y_range.reshape((y_dim, 1)), np.ones((1, x_dim)))
     r_mat = np.sqrt(x_mat*x_mat + y_mat*y_mat)
     x_mat = np.tile(x_mat.flatten(), args.batch_size).reshape(args.batch_size, n_points, 1)
     y_mat = np.tile(y_mat.flatten(), args.batch_size).reshape(args.batch_size, n_points, 1)
     r_mat = np.tile(r_mat.flatten(), args.batch_size).reshape(args.batch_size, n_points, 1)
-    x_mat = torch.from_numpy(x_mat).float()
-    y_mat = torch.from_numpy(y_mat).float()
-    r_mat = torch.from_numpy(r_mat).float()
+    x_mat = torch.from_numpy(x_mat).float()  # ([1, 65536, 1])  Evenly distributed nums -10 to 10
+    y_mat = torch.from_numpy(y_mat).float()  # ([1, 65536, 1])  Values -10 to 10  (dif order then x_mat)
+    r_mat = torch.from_numpy(r_mat).float()  # ([1, 65536, 1])  Evenly distributed nums 14.1 to ? to 14.1
     return x_mat, y_mat, r_mat
+    # These represent the x-coords, y-coords, and radial distances of points in 2D space
 
-
+# Function is called like this: sample(args, netG, z)[0]*255
 def sample(args, netG, z):
     x_vec, y_vec, r_vec = coordinates(args)
-    # HERE killed in next line
     image = netG((x_vec, y_vec, z, r_vec))
     return image
 
@@ -104,19 +109,20 @@ def init(model):
             nn.init.normal_(layer.weight.data)
     return model
 
-
+# z1 is a tensor as a starting point, z2 is the ending point
+# n_frames = # of intermediate steps -> program inputs args.interpolation
 def latent_walk(args, z1, z2, n_frames, netG):
     delta = (z2 - z1) / (n_frames + 1)
-    total_frames = n_frames + 2
-    states = []
+    total_frames = n_frames + 2  # plus 2 for the starting and ending points
+    states = []  # holds the imgs
     for i in range(total_frames):
         z = z1 + delta * float(i)
         if args.c_dim == 1:
             states.append(sample(args, netG, z)[0]*255)
         else:
             states.append(sample(args, netG, z)[0]*255)
-    states = torch.stack(states).detach().numpy()
-    return states
+    states = torch.stack(states).detach().numpy()  # concatenates elements in list to a torch tensor
+    return states  # Returns multiple imageio imgs
 
 
 def cppn(args):
@@ -149,7 +155,31 @@ def cppn(args):
     print (netG)
     n_images = args.n
     zs = []
+
+    if args.audio_file:
+        audiopath = args.audio_file
+        print('audio_file: ', audiopath)
+        # try:
+        #     import torchaudio
+        #     sound, fs = torchaudio.load(audiopath)
+        #     sound = sound.numpy()[:, 0]
+        # except ImportError:
+        #     from audio_loader import load_audio
+        #     sound, fs = load_audio(audiopath)
+        from audio_loader import load_audio
+        sound, fs = load_audio(audiopath)
+
+        print(f'Sample rate is {fs} (44100 is recommended)')
+        print('length of sound array', len(sound))
+
+    # else:  # TODO: PUT the for loop inside else
+
+    # Create z latent vector randomly
     for _ in range(n_images):
+        # Create append a tensor for each img
+        # args.z (default to 8) elements in each tensor
+        # each tensor has 1 raw, args.z columns
+        # initialize to random values in uniform distribution (same likelihood everywhere)
         zs.append(torch.zeros(1, args.z).uniform_(-1.0, 1.0))
 
     if args.walk:
@@ -166,7 +196,7 @@ def cppn(args):
 
                 save_fn = 'trials/{}/{}_{}'.format(subdir, suff, k)
                 print ('saving PNG image at: {}'.format(save_fn))
-                imwrite(save_fn+'.png', img)
+                imwrite(save_fn+'.png', img)  # imageio function
                 k += 1
             print ('walked {}/{}'.format(i+1, n_images))
 
@@ -199,6 +229,8 @@ def cppn(args):
                 'generating images')
         sys.exit(0)
 
+
 if __name__ == '__main__':
+
     args = load_args()
     cppn(args)
