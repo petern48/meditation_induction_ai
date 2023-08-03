@@ -14,13 +14,17 @@ vidpath = sys.argv[2]
 #
 seed = None
 
-try:
-	import torchaudio
-	sound, fs = torchaudio.load(audiopath)
-	sound = sound.numpy()[:, 0]
-except ImportError:
-	from audio_loader import load_audio
-	sound, fs = load_audio(audiopath)
+# try:
+# 	import torchaudio
+# 	sound, fs = torchaudio.load(audiopath)
+# 	sound = sound.numpy()[:, 0]
+# except ImportError:
+# 	from audio_loader import load_audio
+# 	sound, fs = load_audio(audiopath)
+from audio_loader import load_audio
+sound, fs = load_audio(audiopath)
+# print(sound.shape)  # (19099401)  Probably dependent on specific audio input
+
 
 if fs!=44100:
 	print('* fs = %d [kHz]' % fs)
@@ -31,6 +35,8 @@ if fs!=44100:
 #
 #
 
+# Input amplitude spectrum, and condense it into 8 frequency bands
+# reduces dimensionality and make it concise
 def condense_spectrum(ampspectrum):
 	#
 	bands = numpy.zeros(8, dtype=numpy.float32)
@@ -46,6 +52,8 @@ def condense_spectrum(ampspectrum):
 	#
 	return bands
 
+
+# Short time Fourier Transform to extract frequency features
 def do_stft(sound, fs, fps):
 	#
 	nsamples = len(sound)
@@ -77,7 +85,6 @@ def do_stft(sound, fs, fps):
 
 		if start >= nsamples:
 			stop = True
-
 	#
 	return numpy.stack(amplitudes).astype(numpy.float32)
 
@@ -89,6 +96,8 @@ fps = 30
 
 amps = do_stft(sound, fs, fps)
 amps = 0.5*amps/numpy.median(amps, 0)
+# print(amps)  # random nums
+# print(amps.shape)  # amps.shape (12993, 8)
 
 amps[amps < 0.1] = 0.0
 
@@ -99,31 +108,41 @@ amps[amps < 0.1] = 0.0
 import cv2
 
 nrows = 64
+# nrows = args.y_dim
+# ncols = args.x_dim
 ncols = 64
 
 rowmat = (numpy.tile(numpy.linspace(0, nrows-1, nrows, dtype=numpy.float32), ncols).reshape(ncols, nrows).T - nrows/2.0)/(nrows/2.0)
 colmat = (numpy.tile(numpy.linspace(0, ncols-1, ncols, dtype=numpy.float32), nrows).reshape(nrows, ncols)   - ncols/2.0)/(ncols/2.0)
+# colmat is like x_mat? rowmat like y_mat?
+# colmat has -1s along the 1st column. rowmat has -1s along the 1st row
+# rowmat.shape (64, 64)
 
 #
 #
 #
 
-window = 1.0 - numpy.sqrt(numpy.power(rowmat, 2)+numpy.power(colmat, 2)).reshape(nrows*ncols)
-window[window<0] = 0.0
+# analogous to r_mat ??
+window = 1.0 - numpy.sqrt(numpy.power(rowmat, 2)+numpy.power(colmat, 2)).reshape(nrows*ncols) # 1 - radial difference
+window[window<0] = 0.0  # shape  (4096,)
 window = numpy.stack([window, window, window]).transpose()
+# shape (4096, 3)   64x64  3 windows for RGB
 
 if seed is not None:
 	numpy.random.seed(seed)
+
+# Create randomly initialized layers (mutators)
+# Samples weights randomly from uniform distribution
 nlayers = 8
-hsize = 16
+hsize = 16  # num of neurons in each layer
 layers = []
 
 for i in range(0, nlayers):
 	#
-	if i == 0:
+	if i == 0:  # first layer with dimensions inputs
 		mutator = numpy.random.randn(3 + amps.shape[1], hsize)
-	elif i==nlayers-1:
-		mutator = numpy.random.randn(hsize, 3)
+	elif i==nlayers-1:  # last layer
+		mutator = numpy.random.randn(hsize, 3)  # output RGB
 	else:
 		mutator = numpy.random.randn(hsize, hsize)
 	#
@@ -132,28 +151,36 @@ for i in range(0, nlayers):
 	#
 	layers.append(mutator)
 
+# CPPN
 def gen(features):
-	#
+	# For each feature, create a 2D matrix (64x64)
 	fmaps = [f*numpy.ones(rowmat.shape) for f in features]
-	#
+	# print('fmaps[0]', fmaps[0].shape)  # (64,64)
+
+	# List of 3 2D matrices with normalized row indices, col indices and radial distance from (0, 0)
 	inputs = [rowmat, colmat, numpy.sqrt(numpy.power(rowmat, 2)+numpy.power(colmat, 2))]
-	inputs.extend(fmaps)
+	inputs.extend(fmaps)  # Append the fmaps values to the inputs list (this is our full input)
+	# print('inputs length', len(inputs))  # 11 matrices
 	#
 	coordmat = numpy.stack(inputs).transpose(1, 2, 0)
+	# print('coordmat.shape', coordmat.shape)  # (64, 64, 11)
 	coordmat = coordmat.reshape(-1, coordmat.shape[2])
+	# print('coordmat.shape', coordmat.shape)  # (4096, 11)  (num_pixels, num_input_features)
+	# num_input_features includes row indices, col indices, and additional feature maps
 
-	result = coordmat.copy().astype(numpy.float32)
+	result = coordmat.copy().astype(numpy.float32)  # create copy to avoid modifying og coordmat
 
 	for layer in layers:
 		#
-		result = numpy.tanh(numpy.matmul(result, layer))
+		result = numpy.tanh(numpy.matmul(result, layer))  # layer has the weights
 
+	# shift and rescale to the range [0,1]
 	result = (1.0 + result)/2.0
 	#result[:, 0] = 0
 
-	result = result * window
+	result = result * window  # window the matrix
 
-	return result
+	return result  # return the transformed, windowed matrix
 
 #
 #
@@ -161,7 +188,7 @@ def gen(features):
 
 os.system('mkdir -p frames/')
 
-n = amps.shape[0]
+n = amps.shape[0]  # 12993
 features = amps[0, :]
 
 start = time.time()
@@ -169,18 +196,24 @@ start = time.time()
 for t in range(0, n):
 	print('* %d/%d' % (t+1, n))
 	#
-	features = 0.9*features + 0.1*amps[t, :]
+	features = 0.9*features + 0.1*amps[t, :]  # update features using weighted avg of current features 
+	# and the current row of the amps array
+	# print('features.shape', features.shape)  # (8,)
+
 	#
 	result = gen( features )
+	print('result', result)
+	# reshape to (nrows, ncols, num_channels) and scale by 255
 	result = (255.0*result.reshape(nrows, ncols, -1)).astype(numpy.uint8)
 	#
 	#result = 255 - result
 	#result = cv2.resize(result, (256, 256))
 	#
-	cv2.imshow('...', result)
+	# cv2.imshow('...', result)
 	cv2.imwrite('frames/%06d.png' % t, result)
 	cv2.waitKey(1)
-
+print('result > 0', result[result>0])
+sys.exit()
 print('* elapsed time (rendering): %d [s]' % int(time.time() - start))
 
 cv2.destroyAllWindows()
