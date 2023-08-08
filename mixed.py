@@ -2,6 +2,8 @@ import numpy
 import sys
 import os
 import time
+numpy.set_printoptions(threshold=100)
+numpy.set_printoptions(edgeitems=10)
 
 #
 if len(sys.argv)!=3:
@@ -23,6 +25,9 @@ seed = None
 # 	sound, fs = load_audio(audiopath)
 from audio_loader import load_audio
 sound, fs = load_audio(audiopath)
+print(sound)
+print(len(sound))
+
 # print(sound.shape)  # (19099401)  Probably dependent on specific audio input
 
 
@@ -31,9 +36,6 @@ if fs!=44100:
 	print('* sample rate should be 44.1 [kHZ] -> aborting ...')
 	sys.exit()
 
-#
-#
-#
 
 # Input amplitude spectrum, and condense it into 8 frequency bands
 # reduces dimensionality and make it concise
@@ -55,12 +57,10 @@ def condense_spectrum(ampspectrum):
 
 # Short time Fourier Transform to extract frequency features
 def do_stft(sound, fs, fps):
-	#
 	nsamples = len(sound)
 	wsize = 2048
 	stride = int(fs/fps)
 
-	#
 	amplitudes = []
 
 	stop = False
@@ -88,12 +88,8 @@ def do_stft(sound, fs, fps):
 	#
 	return numpy.stack(amplitudes).astype(numpy.float32)
 
-#
-#
-#
 
 fps = 30
-
 amps = do_stft(sound, fs, fps)
 amps = 0.5*amps/numpy.median(amps, 0)
 # print(amps)  # random nums
@@ -101,26 +97,19 @@ amps = 0.5*amps/numpy.median(amps, 0)
 
 amps[amps < 0.1] = 0.0
 
-#
-#
-#
 
 import cv2
 
-nrows = 64
+nrows = 256  # 64
 # nrows = args.y_dim
 # ncols = args.x_dim
-ncols = 64
+ncols = 256  # 64
 
 rowmat = (numpy.tile(numpy.linspace(0, nrows-1, nrows, dtype=numpy.float32), ncols).reshape(ncols, nrows).T - nrows/2.0)/(nrows/2.0)
 colmat = (numpy.tile(numpy.linspace(0, ncols-1, ncols, dtype=numpy.float32), nrows).reshape(nrows, ncols)   - ncols/2.0)/(ncols/2.0)
 # colmat is like x_mat? rowmat like y_mat?
 # colmat has -1s along the 1st column. rowmat has -1s along the 1st row
 # rowmat.shape (64, 64)
-
-#
-#
-#
 
 # analogous to r_mat ??
 window = 1.0 - numpy.sqrt(numpy.power(rowmat, 2)+numpy.power(colmat, 2)).reshape(nrows*ncols) # 1 - radial difference
@@ -160,19 +149,24 @@ def gen(features):
 	# List of 3 2D matrices with normalized row indices, col indices and radial distance from (0, 0)
 	inputs = [rowmat, colmat, numpy.sqrt(numpy.power(rowmat, 2)+numpy.power(colmat, 2))]
 	inputs.extend(fmaps)  # Append the fmaps values to the inputs list (this is our full input)
+	# print('inputs:')
+	# print(inputs)
+	# sys.exit()
 	# print('inputs length', len(inputs))  # 11 matrices
 	#
 	coordmat = numpy.stack(inputs).transpose(1, 2, 0)
 	# print('coordmat.shape', coordmat.shape)  # (64, 64, 11)
 	coordmat = coordmat.reshape(-1, coordmat.shape[2])
-	# print('coordmat.shape', coordmat.shape)  # (4096, 11)  (num_pixels, num_input_features)
+	# print('coordmat.shape', coordmat.shape)  
 	# num_input_features includes row indices, col indices, and additional feature maps
 
 	result = coordmat.copy().astype(numpy.float32)  # create copy to avoid modifying og coordmat
+	print(result.shape)  # (4096, 11)  # (4096, 11)  (num_pixels, num_input_features)
 
-	for layer in layers:
-		#
-		result = numpy.tanh(numpy.matmul(result, layer))  # layer has the weights
+	for layer in layers:  # layer has the weights
+		# sinh resulted in black screen
+		# result = numpy.tanh(numpy.matmul(result, layer))  # Original
+		result = numpy.sinh(numpy.matmul(result, layer))
 
 	# shift and rescale to the range [0,1]
 	result = (1.0 + result)/2.0
@@ -196,13 +190,13 @@ start = time.time()
 for t in range(0, n):
 	print('* %d/%d' % (t+1, n))
 	#
-	features = 0.9*features + 0.1*amps[t, :]  # update features using weighted avg of current features 
+	features = 0.9*features + 0.1*amps[t, :]  # update features using weighted avg of current features
 	# and the current row of the amps array
 	# print('features.shape', features.shape)  # (8,)
 
 	#
 	result = gen( features )
-	print('result', result)
+	# print('result', result)
 	# reshape to (nrows, ncols, num_channels) and scale by 255
 	result = (255.0*result.reshape(nrows, ncols, -1)).astype(numpy.uint8)
 	#
@@ -213,7 +207,8 @@ for t in range(0, n):
 	cv2.imwrite('frames/%06d.png' % t, result)
 	cv2.waitKey(1)
 print('result > 0', result[result>0])
-sys.exit()
+print('result > 0', len(result[result>0]))
+
 print('* elapsed time (rendering): %d [s]' % int(time.time() - start))
 
 cv2.destroyAllWindows()
