@@ -4,11 +4,19 @@ import argparse
 import numpy as np
 import torch
 import tifffile
+import librosa
 
 from torch import nn
 from torch.nn import functional as F
 from imageio import imwrite, imsave
 
+
+RED = 0
+GREEN = 1
+BLUE = 2
+
+
+np.set_printoptions(threshold=100)
 # Because imageio uses the root logger instead of warnings package...
 import logging
 logging.getLogger().setLevel(logging.ERROR)
@@ -32,6 +40,7 @@ def load_args():
     parser.add_argument('--walk', action='store_true', help='interpolate')
     parser.add_argument('--sample', action='store_true', help='sample n images')
     parser.add_argument('--audio_file', default='', type=str, help='(optional) audio file input')
+    parser.add_argument('--color_scheme', default='', type=str, help='(optional) warm or cool')
 
     args = parser.parse_args()
     return args
@@ -52,16 +61,15 @@ class Generator(nn.Module):
         self.linear_out = nn.Linear(self.net, self.c_dim)
         self.sigmoid = nn.Sigmoid()
 
-        
+
     def forward(self, inputs):
         x, y, z, r = inputs  # The following shapes are for 256x256
-        print('x.shape', x.shape)  # ([1,65536, 1])
-        print('y.shape', y.shape)
+        # x.shape and y.shape  # ([1,65536, 1])
         n_points = self.x_dim * self.y_dim  # 256 * 256 = 65536
         ones = torch.ones(n_points, 1, dtype=torch.float)  # [.shape 65536,1]
-        print('z.shape', z.shape)
+        # z.shape ([1, 8])
         z_scaled = z.view(self.batch_size, 1, self.z) * ones * self.scale
-        print('z_scaled', z_scaled.shape)
+        # z_scaled.shape ([1, 65336, 8])
         z_pt = self.linear_z(z_scaled.view(self.batch_size*n_points, self.z))  # torch.tensor.view change shape
         x_pt = self.linear_x(x.view(self.batch_size*n_points, -1))
         y_pt = self.linear_y(y.view(self.batch_size*n_points, -1))
@@ -69,12 +77,27 @@ class Generator(nn.Module):
         U = z_pt + x_pt + y_pt + r_pt
         H = torch.tanh(U)
         x = self.linear_h(H)
-        H = F.elu(x)
+        H = F.elu(x)  # Exponential Linear Unit
         H = F.softplus(self.linear_h(H))
         H = torch.tanh(self.linear_h(H))
         x = .5 * torch.sin(self.linear_out(H)) + .5
         img = x.reshape(self.batch_size, self.y_dim, self.x_dim, self.c_dim)
-        #print ('G out: ', img.shape)
+        # print ('G out: ', img.shape)  # [1, 256, 256, 3]
+        # Scale by 255
+        img *= 255
+        if args.color_scheme:  # imageio is RGB
+            if args.color_scheme == 'warm':
+                # Reduce the green and blue values
+                img[:, :, :, RED] *= 1.3
+                img[:, :, :, GREEN] *= 1.0
+                img[:, :, :, BLUE] *= 0.7
+            elif args.color_scheme == 'cool':
+                img[:, :, :, RED] *= 0.7
+                img[:, :, :, GREEN] *= 1.0
+                img[:, :, :, BLUE] *= 1.3
+        
+        img[img>255] = 255  # Ensure values are under 255
+
         return img
 
 
@@ -84,8 +107,8 @@ def coordinates(args):
     x_range = scale*(np.arange(x_dim)-(x_dim-1)/2.0)/(x_dim-1)/0.5  # (256,)  for 256x256
     # ^ Evenly spaced values
     y_range = scale*(np.arange(y_dim)-(y_dim-1)/2.0)/(y_dim-1)/0.5  # (256,)
-    x_mat = np.matmul(np.ones((y_dim, 1)), x_range.reshape((1, x_dim)))
-    y_mat = np.matmul(y_range.reshape((y_dim, 1)), np.ones((1, x_dim)))
+    x_mat = np.matmul(np.ones((y_dim, 1)), x_range.reshape((1, x_dim)))  # (256, 256)   -10s along the 1st and last col
+    y_mat = np.matmul(y_range.reshape((y_dim, 1)), np.ones((1, x_dim)))  # (256, 256)   -10s along the 1st and last row
     r_mat = np.sqrt(x_mat*x_mat + y_mat*y_mat)
     x_mat = np.tile(x_mat.flatten(), args.batch_size).reshape(args.batch_size, n_points, 1)
     y_mat = np.tile(y_mat.flatten(), args.batch_size).reshape(args.batch_size, n_points, 1)
@@ -95,6 +118,7 @@ def coordinates(args):
     r_mat = torch.from_numpy(r_mat).float()  # ([1, 65536, 1])  Evenly distributed nums 14.1 to ? to 14.1
     return x_mat, y_mat, r_mat
     # These represent the x-coords, y-coords, and radial distances of points in 2D space
+
 
 # Function is called like this: sample(args, netG, z)[0]*255
 def sample(args, netG, z):
@@ -108,6 +132,7 @@ def init(model):
         if isinstance(layer, nn.Linear):
             nn.init.normal_(layer.weight.data)
     return model
+
 
 # z1 is a tensor as a starting point, z2 is the ending point
 # n_frames = # of intermediate steps -> program inputs args.interpolation
@@ -157,30 +182,62 @@ def cppn(args):
     zs = []
 
     if args.audio_file:
-        audiopath = args.audio_file
-        print('audio_file: ', audiopath)
-        # try:
-        #     import torchaudio
-        #     sound, fs = torchaudio.load(audiopath)
-        #     sound = sound.numpy()[:, 0]
-        # except ImportError:
-        #     from audio_loader import load_audio
-        #     sound, fs = load_audio(audiopath)
-        from audio_loader import load_audio
-        sound, fs = load_audio(audiopath)
+        def feature_extraction(file_path, num_mfcc):
+            x, sample_rate = librosa.load(file_path, res_type='kaiser_fast')
+            print('x: ', x)  # len is sample_rate values per 1 second
+            print('x: ', x.shape)
+            print('sr', sample_rate)
+            start = 0
+            end = sample_rate
+            t = len(x)
+            seconds = len(x) / sample_rate  # Seconds in the video
+            features = np.empty(0, dtype=np.float32)
+            while end <= t:
+                segment = x[start: end]
+                mfcc = np.mean(librosa.feature.mfcc(y=segment, sr=sample_rate, n_mfcc=num_mfcc).T, axis=0)
+                mfcc = np.reshape(mfcc, (1, args.z))
+                # stft = librosa.stft(segment).flatten()  # not flattened
+                # print('stft', stft.shape)
+                # Xdb = librosa.amplitude_to_db(abs(X))
+                # feature_segment = np.concatenate(mfcc, stft)
+                # features.append(feature_segment)
+                # print('feature_segment', feature_segment)
+                features = np.append(features, mfcc)
+                start = end
+                end += sample_rate
+            features = np.reshape(features, (-1, args.z))
 
-        print(f'Sample rate is {fs} (44100 is recommended)')
-        print('length of sound array', len(sound))
+            random_scale = np.random.randint(999)
+            features *= random_scale
 
-    # else:  # TODO: PUT the for loop inside else
+            max_val = np.amax(np.abs(features))
+            features /= max_val
+            features = torch.from_numpy(features)
+            return features, seconds
+
+
+        print('args.audio_file', args.audio_file)
+        zs, seconds = feature_extraction(args.audio_file, args.z)
+
+        n_images = len(zs)  # REMOVE ?? TODO
+        print('n_images', n_images)
+
+
+        # from audio_loader import load_audio
+        # sound, fs = load_audio(args.audio_file)
+        # print(f'Sample rate is {fs} (44100 is recommended)')
+        # print('length of sound array', len(sound))
 
     # Create z latent vector randomly
-    for _ in range(n_images):
-        # Create append a tensor for each img
-        # args.z (default to 8) elements in each tensor
-        # each tensor has 1 raw, args.z columns
-        # initialize to random values in uniform distribution (same likelihood everywhere)
-        zs.append(torch.zeros(1, args.z).uniform_(-1.0, 1.0))
+    else:
+        for _ in range(n_images):
+            # Create and append a tensor for each img
+            # args.z (default to 8) elements in each tensor
+            # each tensor has 1 row, args.z columns
+            # initialize to random values in uniform distribution (same likelihood everywhere)
+            z_tensor = torch.zeros(1, args.z).uniform_(-1.0, 1.0)
+            zs.append(z_tensor)
+            # z_tensor.shape  ([1, 8])  [1, args.z]
 
     if args.walk:
         k = 0
@@ -189,10 +246,8 @@ def cppn(args):
                 images = latent_walk(args, zs[i], zs[0], args.interpolation, netG)
                 break
             images = latent_walk(args, zs[i], zs[i+1], args.interpolation, netG)
-            
-            for img in images:
 
-                print(img.shape)
+            for img in images:
 
                 save_fn = 'trials/{}/{}_{}'.format(subdir, suff, k)
                 print ('saving PNG image at: {}'.format(save_fn))
@@ -231,6 +286,61 @@ def cppn(args):
 
 
 if __name__ == '__main__':
-
+    output_file_name = 'output.mp4'
+    os.system('rm trials/*')
+    os.system('rm temp.mp4')
+    os.system('rm output.mp4')
     args = load_args()
     cppn(args)
+    # Create video from imgs
+    os.system(f"ffmpeg -framerate 7 -pattern_type glob -i 'trials/*.png' -c:v libx264 -crf 23 temp.mp4")
+    # Overlay music over video
+    if args.audio_file:
+        os.system(f'ffmpeg -i temp.mp4 -i {args.audio_file} -c:v copy -map 0:v -map 1:a -y {output_file_name}')
+    else:
+        os.system(f'mv temp.mp4 {output_file_name}')
+    print(f'File created as {output_file_name}')
+
+
+
+# from audio_loader import load_audio
+# sound, fs = load_audio(audiopath)
+# fps = 30
+
+# amps = do_stft(sound, fs, fps)
+# amps = 0.5*amps/numpy.median(amps, 0)
+# # print(amps)  # random nums
+# # print(amps.shape)  # amps.shape (12993, 8)
+
+# amps[amps < 0.1] = 0.0
+
+# x_mat, y_mat
+
+# # analogous to r_mat ??
+# window = 1.0 - numpy.sqrt(numpy.power(rowmat, 2)+numpy.power(colmat, 2)).reshape(nrows*ncols) # 1 - radial difference
+# window[window<0] = 0.0  # shape  (4096,)
+# window = numpy.stack([window, window, window]).transpose()
+
+# n = amps.shape[0]  # 12993
+# features = amps[0, :]
+
+# start = time.time()
+
+# for t in range(0, n):
+# 	print('* %d/%d' % (t+1, n))
+
+# 	features = 0.9*features + 0.1*amps[t, :]  # update features using weighted avg of current features 
+# 	# and the current row of the amps array
+# 	# print('features.shape', features.shape)  # (8,)
+
+
+# 	result = gen( features )
+# 	print('result', result)
+# 	# reshape to (nrows, ncols, num_channels) and scale by 255
+# 	result = (255.0*result.reshape(nrows, ncols, -1)).astype(numpy.uint8)
+
+# 	#result = 255 - result
+# 	#result = cv2.resize(result, (256, 256))
+    # CHANGE DIR NAME
+# 	cv2.imwrite('frames/%06d.png' % t, result)  # og used cv2.imwrite
+# print('* elapsed time (rendering): %d [s]' % int(time.time() - start))
