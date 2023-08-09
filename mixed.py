@@ -2,6 +2,8 @@ import numpy
 import sys
 import os
 import time
+import torch
+# from cppn import Generator
 numpy.set_printoptions(threshold=100)
 numpy.set_printoptions(edgeitems=10)
 
@@ -105,9 +107,11 @@ nrows = 256  # 64
 # ncols = args.x_dim
 ncols = 256  # 64
 
+# CHANGED TODO: for trying the other cppn
 rowmat = (numpy.tile(numpy.linspace(0, nrows-1, nrows, dtype=numpy.float32), ncols).reshape(ncols, nrows).T - nrows/2.0)/(nrows/2.0)
+# rowmat2 = (numpy.tile(numpy.linspace(0, nrows-1, nrows, dtype=numpy.float32), ncols).reshape(ncols, nrows) - nrows/2.0)/(nrows/2.0)
 colmat = (numpy.tile(numpy.linspace(0, ncols-1, ncols, dtype=numpy.float32), nrows).reshape(nrows, ncols)   - ncols/2.0)/(ncols/2.0)
-# colmat is like x_mat? rowmat like y_mat?
+# colmat is like x_mat rowmat like y_mat
 # colmat has -1s along the 1st column. rowmat has -1s along the 1st row
 # rowmat.shape (64, 64)
 
@@ -142,18 +146,18 @@ for i in range(0, nlayers):
 
 # CPPN
 def gen(features):
+	global colmat, rowmat, rowmat2
 	# For each feature, create a 2D matrix (64x64)
 	fmaps = [f*numpy.ones(rowmat.shape) for f in features]
 	# print('fmaps[0]', fmaps[0].shape)  # (64,64)
 
+	# ORIGINAL MODEL code
 	# List of 3 2D matrices with normalized row indices, col indices and radial distance from (0, 0)
 	inputs = [rowmat, colmat, numpy.sqrt(numpy.power(rowmat, 2)+numpy.power(colmat, 2))]
 	inputs.extend(fmaps)  # Append the fmaps values to the inputs list (this is our full input)
 	# print('inputs:')
-	# print(inputs)
-	# sys.exit()
 	# print('inputs length', len(inputs))  # 11 matrices
-	#
+
 	coordmat = numpy.stack(inputs).transpose(1, 2, 0)
 	# print('coordmat.shape', coordmat.shape)  # (64, 64, 11)
 	coordmat = coordmat.reshape(-1, coordmat.shape[2])
@@ -161,7 +165,7 @@ def gen(features):
 	# num_input_features includes row indices, col indices, and additional feature maps
 
 	result = coordmat.copy().astype(numpy.float32)  # create copy to avoid modifying og coordmat
-	print(result.shape)  # (4096, 11)  # (4096, 11)  (num_pixels, num_input_features)
+	# print(result.shape)  # (4096, 11)  (num_pixels, num_input_features)
 
 	for layer in layers:  # layer has the weights
 		# sinh resulted in black screen
@@ -174,11 +178,36 @@ def gen(features):
 
 	result = result * window  # window the matrix
 
-	return result  # return the transformed, windowed matrix
+	return result  # return the transformed, windowed matrix  (65536, 3)
 
-#
-#
-#
+	# Try using Generator model from cppn.py
+	# args = {
+	#     	'x_dim':256,
+	# 	    'y_dim':256,
+	# 	    'net':32,
+	# 	    'c_dim':3,
+	# 	    'batch_size':1,
+	# 	    'scale':10,
+	# 	    'z':8,
+	# 	    'color_scheme':''
+	# }
+	# model = Generator(args)
+	# # image = netG((x_vec, y_vec, z, r_vec))
+	# features = torch.from_numpy(features)
+	# r_vec = torch.sqrt(torch.pow(rowmat2, 2)+torch.pow(colmat2, 2))
+	# # TODO: FIX ME
+	# image = model((colmat2, rowmat2, features, r_vec))
+
+	# # Reshape properly sized numpy array
+	# print('max', torch.max(image))
+	# print('min', torch.min(image))
+	# image = image.view(nrows*ncols, args['c_dim']).detach().numpy()  # (65536, 3)
+
+	# return image
+
+
+# colmat2 = torch.from_numpy(colmat).view(1, nrows*ncols, 1)
+# rowmat2 = torch.from_numpy(rowmat2).view(1, nrows*ncols, 1)
 
 os.system('mkdir -p frames/')
 
