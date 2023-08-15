@@ -1,5 +1,5 @@
 import os
-import pyttsx3
+# import pyttsx3
 from gtts import gTTS
 import torch
 import numpy as np
@@ -55,7 +55,7 @@ def overlay_music_and_speech(speech_file_path, music_file_path):
         longer_music += music1
 
     combined = speech.overlay(longer_music)
-    file_name = file_name.replace('.mp3', 'with-music.mp3')
+    file_name = speech_file_path.replace('speech-only.mp3', 'with-music.mp3')
     combined.export(file_name, format="mp3")
 
     return file_name
