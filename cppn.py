@@ -10,11 +10,9 @@ from torch import nn
 from torch.nn import functional as F
 from imageio import imwrite, imsave
 
-
 RED = 0
 GREEN = 1
 BLUE = 2
-
 
 np.set_printoptions(threshold=100)
 # Because imageio uses the root logger instead of warnings package...
@@ -51,6 +49,18 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         for k, v in vars(args).items():
             setattr(self, k, v)
+        # try:  # Added this
+        #     for k, v in vars(args).items():
+        #         setattr(self, k, v)
+        # except:  # Input dictionary instead
+        #     self.x_dim = args['x_dim']
+        #     self.y_dim = args['y_dim']
+        #     self.net = args['net']
+        #     self.c_dim = args['c_dim']
+        #     self.batch_size = args['batch_size']
+        #     self.scale = args['scale']
+        #     self.z = args['z']
+        #     self.color_scheme = args['color_scheme']
         self.name = 'Generator'
         dim = self.x_dim * self.y_dim * self.batch_size
         self.linear_z = nn.Linear(self.z, self.net)
@@ -64,7 +74,7 @@ class Generator(nn.Module):
 
     def forward(self, inputs):
         x, y, z, r = inputs  # The following shapes are for 256x256
-        # x.shape and y.shape  # ([1,65536, 1])
+        # x.shape, y.shape, r.shape # ([1, 65536, 1]), z.shape is [8] z_dim, 
         n_points = self.x_dim * self.y_dim  # 256 * 256 = 65536
         ones = torch.ones(n_points, 1, dtype=torch.float)  # [.shape 65536,1]
         # z.shape ([1, 8])
@@ -85,19 +95,21 @@ class Generator(nn.Module):
         # print ('G out: ', img.shape)  # [1, 256, 256, 3]
         # Scale by 255
         img *= 255
-        if args.color_scheme:  # imageio is RGB
-            if args.color_scheme == 'warm':
+        if self.color_scheme:  # imageio is RGB
+            if self.color_scheme == 'warm':
                 # Reduce the green and blue values
                 img[:, :, :, RED] *= 1.3
                 img[:, :, :, GREEN] *= 1.0
                 img[:, :, :, BLUE] *= 0.7
-            elif args.color_scheme == 'cool':
+            elif self.color_scheme == 'cool':
                 img[:, :, :, RED] *= 0.7
                 img[:, :, :, GREEN] *= 1.0
                 img[:, :, :, BLUE] *= 1.3
+            else:
+                print("Invalid Color Scheme. Exiting...")
+                sys.exit(0)
         
         img[img>255] = 255  # Ensure values are under 255
-
         return img
 
 
@@ -141,7 +153,7 @@ def latent_walk(args, z1, z2, n_frames, netG):
     total_frames = n_frames + 2  # plus 2 for the starting and ending points
     states = []  # holds the imgs
     for i in range(total_frames):
-        z = z1 + delta * float(i)
+        z = z1 + delta * float(i)  # shape [1,8]
         if args.c_dim == 1:
             states.append(sample(args, netG, z)[0]*255)
         else:
@@ -177,16 +189,13 @@ def cppn(args):
         suff = 'z-{}_scale-{}_cdim-{}_net-{}'.format(args.z, args.scale, args.c_dim, args.net)
 
     netG = init(Generator(args))
-    print (netG)
+    # print (netG)
     n_images = args.n
     zs = []
 
     if args.audio_file:
         def feature_extraction(file_path, num_mfcc):
-            x, sample_rate = librosa.load(file_path, res_type='kaiser_fast')
-            print('x: ', x)  # len is sample_rate values per 1 second
-            print('x: ', x.shape)
-            print('sr', sample_rate)
+            x, sample_rate = librosa.load(file_path, res_type='kaiser_fast')  # TODO: See if i can choose the sample rate
             start = 0
             end = sample_rate
             t = len(x)
@@ -207,8 +216,8 @@ def cppn(args):
                 end += sample_rate
             features = np.reshape(features, (-1, args.z))
 
-            random_scale = np.random.randint(999)
-            features *= random_scale
+            # random_scale = np.random.randint(999)
+            # features *= random_scale
 
             max_val = np.amax(np.abs(features))
             features /= max_val
@@ -219,9 +228,7 @@ def cppn(args):
         print('args.audio_file', args.audio_file)
         zs, seconds = feature_extraction(args.audio_file, args.z)
 
-        n_images = len(zs)  # REMOVE ?? TODO
-        print('n_images', n_images)
-
+        n_images = len(zs)
 
         # from audio_loader import load_audio
         # sound, fs = load_audio(args.audio_file)
@@ -264,7 +271,7 @@ def cppn(args):
             else:
                 img = img[0]
             img = img * 255
-            
+
             metadata = dict(seed=str(seed),
                             z_sample=str(list(z.numpy()[0])),
                             z=str(args.z), 
@@ -286,61 +293,23 @@ def cppn(args):
 
 
 if __name__ == '__main__':
-    output_file_name = 'output.mp4'
-    os.system('rm trials/*')
-    os.system('rm temp.mp4')
-    os.system('rm output.mp4')
+    # os.system('rm trials/*')
+    # os.system('rm temp.mp4')
+    # os.system('rm output.mp4')
     args = load_args()
+    # output_file_name = 'output.mp4'
     cppn(args)
-    # Create video from imgs
-    os.system(f"ffmpeg -framerate 7 -pattern_type glob -i 'trials/*.png' -c:v libx264 -crf 23 temp.mp4")
-    # Overlay music over video
-    if args.audio_file:
-        os.system(f'ffmpeg -i temp.mp4 -i {args.audio_file} -c:v copy -map 0:v -map 1:a -y {output_file_name}')
-    else:
-        os.system(f'mv temp.mp4 {output_file_name}')
-    print(f'File created as {output_file_name}')
+
+    # # Create video from imgs
+    # fps = 6  # 7
+    # os.system(f"ffmpeg -framerate {fps} -pattern_type glob -i 'trials/*.png' -c:v libx264 -pix_fmt yuv420p -crf 23 temp.mp4")
+    # # Overlay music over video
+    # if args.audio_file:
+    #     # os.system(f'ffmpeg -i temp.mp4 -i {args.audio_file} -c copy -map 0:v:0 -map 1:a:0 {output_file_name}')
+    #     os.system(f'ffmpeg -i temp.mp4 -i {args.audio_file} -c:v copy -map 0:v -map 1:a -y {output_file_name}')
+    # else:
+    #     os.system(f'mv temp.mp4 {output_file_name}')
+    # print(f'File created as {output_file_name}')
 
 
-
-# from audio_loader import load_audio
-# sound, fs = load_audio(audiopath)
-# fps = 30
-
-# amps = do_stft(sound, fs, fps)
-# amps = 0.5*amps/numpy.median(amps, 0)
-# # print(amps)  # random nums
-# # print(amps.shape)  # amps.shape (12993, 8)
-
-# amps[amps < 0.1] = 0.0
-
-# x_mat, y_mat
-
-# # analogous to r_mat ??
-# window = 1.0 - numpy.sqrt(numpy.power(rowmat, 2)+numpy.power(colmat, 2)).reshape(nrows*ncols) # 1 - radial difference
-# window[window<0] = 0.0  # shape  (4096,)
-# window = numpy.stack([window, window, window]).transpose()
-
-# n = amps.shape[0]  # 12993
-# features = amps[0, :]
-
-# start = time.time()
-
-# for t in range(0, n):
-# 	print('* %d/%d' % (t+1, n))
-
-# 	features = 0.9*features + 0.1*amps[t, :]  # update features using weighted avg of current features 
-# 	# and the current row of the amps array
-# 	# print('features.shape', features.shape)  # (8,)
-
-
-# 	result = gen( features )
-# 	print('result', result)
-# 	# reshape to (nrows, ncols, num_channels) and scale by 255
-# 	result = (255.0*result.reshape(nrows, ncols, -1)).astype(numpy.uint8)
-
-# 	#result = 255 - result
-# 	#result = cv2.resize(result, (256, 256))
-    # CHANGE DIR NAME
-# 	cv2.imwrite('frames/%06d.png' % t, result)  # og used cv2.imwrite
-# print('* elapsed time (rendering): %d [s]' % int(time.time() - start))
+    # os.system('ffmpeg -r ' + str(fps) + ' -f image2 -s 64x64 -i frames/%06d.png -i ' + audiopath + ' -crf 25 -vcodec libx264 -pix_fmt yuv420p ' + vidpath)
