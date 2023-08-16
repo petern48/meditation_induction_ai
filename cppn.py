@@ -255,12 +255,14 @@ def cppn(args):
             images = latent_walk(args, zs[i], zs[i+1], args.interpolation, netG)
 
             for img in images:
-
-                save_fn = 'trials/{}/{}_{}'.format(subdir, suff, k)
+                # Pad with zeros to ensure picutres are in proper order
+                save_fn = 'trials/{}/{}_{}'.format(subdir, suff, str(k).zfill(7))
                 print ('saving PNG image at: {}'.format(save_fn))
                 imwrite(save_fn+'.png', img)  # imageio function
                 k += 1
             print ('walked {}/{}'.format(i+1, n_images))
+        print('total imgs: ', k)
+        print('seconds ', seconds)
 
     elif args.sample:
         zs, _ = torch.stack(zs).sort()
@@ -293,11 +295,7 @@ def cppn(args):
 
 
 if __name__ == '__main__':
-    # os.system('rm trials/*')
-    # os.system('rm temp.mp4')
-    # os.system('rm output.mp4')
     args = load_args()
-    # output_file_name = 'output.mp4'
     cppn(args)
 
     # # Create video from imgs
@@ -310,6 +308,5 @@ if __name__ == '__main__':
     # else:
     #     os.system(f'mv temp.mp4 {output_file_name}')
     # print(f'File created as {output_file_name}')
-
 
     # os.system('ffmpeg -r ' + str(fps) + ' -f image2 -s 64x64 -i frames/%06d.png -i ' + audiopath + ' -crf 25 -vcodec libx264 -pix_fmt yuv420p ' + vidpath)
