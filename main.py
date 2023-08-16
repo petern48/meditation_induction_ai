@@ -56,6 +56,7 @@ def main():
 
     # Text To Audio
     audio_file_name = text_to_speech(script, args.accent)
+    speech_only_file = audio_file_name
 
     if args.no_music:
         print('no_music selected ... skipping background music')
@@ -72,12 +73,12 @@ def main():
     # involves visualizing realistic images while the CPPN only covers the other ones.
 
     assert(os.path.isfile('cppn.py'))
-    # Call CPPN given audio input
 
     inter = 25
     scale = 10
     temp_file = 'temp-file.mp4'
     imgs_dir = 'trials'
+    fps = 7
 
     # Ensure trials directory is empty
     print(f'Deleting any files in {imgs_dir}/')
@@ -86,10 +87,13 @@ def main():
         os.remove(f)
     # os.system('rm trials/*')  # 2>/dev/null
 
-
     # Input audio into cppn to create imgs
+    # cmd = f'echo overwrite | python cppn.py --walk --x_dim {args.x_dim} --y_dim {args.y_dim} \
+    #           --c_dim {args.channels} --interpolation {inter} --audio_file {audio_file_name} \
+    #           --scale {scale}'
+    # Input only speech into CPPN
     cmd = f'echo overwrite | python cppn.py --walk --x_dim {args.x_dim} --y_dim {args.y_dim} \
-              --c_dim {args.channels} --interpolation {inter} --audio_file {audio_file_name} \
+              --c_dim {args.channels} --interpolation {inter} --audio_file {speech_only_file} \
               --scale {scale}'
 
     if args.color_scheme:
@@ -100,7 +104,7 @@ def main():
     
     # Compile imgs into video
     print('\nCompiling imgs into video')
-    os.system(f"ffmpeg -framerate 7 -pattern_type glob -i '{imgs_dir}/*.png' -pix_fmt yuv420p \
+    os.system(f"ffmpeg -framerate {fps} -pattern_type glob -i '{imgs_dir}/*.png' -pix_fmt yuv420p \
               -c:v libx264 -crf 23 {temp_file}")
 
     # Add audio to video
