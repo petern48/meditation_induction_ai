@@ -41,6 +41,8 @@ Options: [focused]  [body-scan]  [visualization]  [reflection]  [movement]
 
 - `--script_file` [optional] input a file path to a text file to skip text generation step
 
+- `--text_gen_only` [optional] stop after generating the meditation script
+
 - `--accent` [optional] select an accent for the speech to be spoken in  
 Default: indian, co.in   
 Options: [com.au] [co.uk] [us] [ca] [co.in] [ie] [co.za]

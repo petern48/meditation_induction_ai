@@ -3,7 +3,6 @@ import os, glob
 import argparse
 from text_generation import text_generation
 from text_to_audio import text_to_speech, overlay_music_and_speech
-# from video_generation import 
 
 
 DEFAULT_MUSIC = 'music-only1.mp3'
@@ -12,6 +11,7 @@ def load_args():
     parser = argparse.ArgumentParser(description='meditation_induction')
     parser.add_argument('--med_type', type=str, help="""type of meditation:
                         '[focused]  [body-scan]  [visualization]  [reflection]  [movement]""")
+    parser.add_argument('--text_gen_only', action='store_true', help='only generate the meditation script')
     parser.add_argument('--script_file', type=str, default='', help='input script to skip text generation')
     parser.add_argument('--accent', type=str, default='co.in', help='[com.au] [co.uk] [us] [ca] [co.in] [ie] [co.za]')
     parser.add_argument('--music_file', default=DEFAULT_MUSIC, type=str, help='background music')
@@ -37,6 +37,7 @@ def main():
     if args.script_file:
         with open(args.script_file, 'r') as f:
             script = f.read()
+        print('script_file provided, skipping text generation')
 
     else:
         meditation_types = ['focused', 'body-scan', 'visualization', 'reflection', 'movement']
@@ -53,6 +54,10 @@ def main():
 
         except:
             print(f"Couldn't store script in file {script_file_name}. Continuing...")
+    
+    if args.text_gen_only:
+        print('text_gen_only selected, exiting...')
+        sys.exit()
 
     # Text To Audio
     audio_file_name = text_to_speech(script, args.accent)
@@ -78,7 +83,7 @@ def main():
     scale = 10
     temp_file = 'temp-file.mp4'
     imgs_dir = 'trials'
-    fps = 7
+    fps = 27
 
     # Ensure trials directory is empty
     print(f'Deleting any files in {imgs_dir}/')
@@ -88,13 +93,13 @@ def main():
     # os.system('rm trials/*')  # 2>/dev/null
 
     # Input audio into cppn to create imgs
-    # cmd = f'echo overwrite | python cppn.py --walk --x_dim {args.x_dim} --y_dim {args.y_dim} \
-    #           --c_dim {args.channels} --interpolation {inter} --audio_file {audio_file_name} \
-    #           --scale {scale}'
-    # Input only speech into CPPN
     cmd = f'echo overwrite | python cppn.py --walk --x_dim {args.x_dim} --y_dim {args.y_dim} \
-              --c_dim {args.channels} --interpolation {inter} --audio_file {speech_only_file} \
+              --c_dim {args.channels} --interpolation {inter} --audio_file {audio_file_name} \
               --scale {scale}'
+    # # Input only speech into CPPN
+    # cmd = f'echo overwrite | python cppn.py --walk --x_dim {args.x_dim} --y_dim {args.y_dim} \
+    #           --c_dim {args.channels} --interpolation {inter} --audio_file {speech_only_file} \
+    #           --scale {scale}'
 
     if args.color_scheme:
         cmd += f' --color_scheme {args.color_scheme}'
