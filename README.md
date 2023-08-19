@@ -3,8 +3,13 @@ Clone the repo
 `git clone https://github.com/petern48/meditation_induction_ai.git`  
 Change directory  
 `cd meditation_induction_ai`
+
 #### Install packages
-Create conda environment
+Create conda environments with proper packages
+`conda create --name med_ai --file requirements-conda.txt`
+
+#### Alternative without conda
+Create conda environment (optional but recommended)
 `conda create -n med_ai python==3.9`  
 Activate environment  
 `conda activate med_ai`  
