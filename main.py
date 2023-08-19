@@ -3,6 +3,8 @@ import os, glob
 import argparse
 from text_generation import text_generation
 from text_to_audio import text_to_speech, overlay_music_and_speech
+import time
+import cppn
 
 
 DEFAULT_MUSIC = 'music-only1.mp3'
@@ -80,32 +82,44 @@ def main():
     assert(os.path.isfile('cppn.py'))
 
     inter = 25
-    scale = 10
+    scale = 100
     temp_file = 'temp-file.mp4'
     imgs_dir = 'trials'
-    fps = 27
 
     # Ensure trials directory is empty
-    print(f'Deleting any files in {imgs_dir}/')
+    start_delete = time.time()
     files = glob.glob('trials/*')
     for f in files:
         os.remove(f)
+    end_delete = time.time()
+    delete_duration = end_delete - start_delete
+    print(f"Deleted files in {imgs_dir}/ in {delete_duration} time")
     # os.system('rm trials/*')  # 2>/dev/null
+
+    cppn_args = args
+    cppn_args.interpolation = inter
+    cppn_args.c_dim = args.channels
+    cppn_args.audio_file = audio_file_name
+    cppn_args.scale = scale
+
+    print('Creating imgs using cppn')
+    frames_created, seconds = cppn.cppn(cppn_args)
+    fps = round(frames_created / seconds)
+    print('frames_created', frames_created)
+    print('seconds', seconds)
+    print('fps', fps)
 
     # Input audio into cppn to create imgs
     cmd = f'echo overwrite | python cppn.py --walk --x_dim {args.x_dim} --y_dim {args.y_dim} \
-              --c_dim {args.channels} --interpolation {inter} --audio_file {audio_file_name} \
-              --scale {scale}'
+              --c_dim {args.c_dim} --interpolation {inter} --scale {scale}'
     # # Input only speech into CPPN
-    # cmd = f'echo overwrite | python cppn.py --walk --x_dim {args.x_dim} --y_dim {args.y_dim} \
-    #           --c_dim {args.channels} --interpolation {inter} --audio_file {speech_only_file} \
-    #           --scale {scale}'
-
+    #   --audio_file {speech_only_file}
+    if audio_file_name:
+        cmd += f'--audio_file {audio_file_name}'
     if args.color_scheme:
         cmd += f' --color_scheme {args.color_scheme}'
-    cmd += ' > /dev/null'
-    print('Creating imgs using cppn')
-    os.system(cmd)
+    # cmd += ' > /dev/null'
+    # os.system(cmd)
     
     # Compile imgs into video
     print('\nCompiling imgs into video')

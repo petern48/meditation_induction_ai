@@ -20,47 +20,65 @@ import logging
 logging.getLogger().setLevel(logging.ERROR)
 
 
-def load_args():
+def load_args(args=None):
+    # If inputting args from main.py, add the remaining default args before running the program
+    if args:
+        args.z = 8
+        args.n = 1
+        # x_dim
+        # y_dim
+        # scale
+        # c_dim
+        args.net = 32
+        args.batch_size = 1
+        # interpolation
+        args.reinit = 10
+        args.exp = '.'
+        args.name_style = 'params'
+        args.walk = True
+        # audio_file
+        # color_scheme
 
-    parser = argparse.ArgumentParser(description='cppn-pytorch')
-    parser.add_argument('--z', default=8, type=int, help='latent space width')
-    parser.add_argument('--n', default=1, type=int, help='images to generate')
-    parser.add_argument('--x_dim', default=2048, type=int, help='out image width')
-    parser.add_argument('--y_dim', default=2048, type=int, help='out image height')
-    parser.add_argument('--scale', default=10, type=float, help='mutiplier on z')
-    parser.add_argument('--c_dim', default=1, type=int, help='channels')
-    parser.add_argument('--net', default=32, type=int, help='net width')
-    parser.add_argument('--batch_size', default=1, type=int)
-    parser.add_argument('--interpolation', default=10, type=int)
-    parser.add_argument('--reinit', default=10, type=int, help='reinit generator every so often')
-    parser.add_argument('--exp', default='.', type=str, help='output fn')
-    parser.add_argument('--name_style', default='params', type=str, help='output fn')
-    parser.add_argument('--walk', action='store_true', help='interpolate')
-    parser.add_argument('--sample', action='store_true', help='sample n images')
-    parser.add_argument('--audio_file', default='', type=str, help='(optional) audio file input')
-    parser.add_argument('--color_scheme', default='', type=str, help='(optional) warm or cool')
+    # If not inputting args from other file
+    else:
+        parser = argparse.ArgumentParser(description='cppn-pytorch')
+        parser.add_argument('--z', default=8, type=int, help='latent space width')
+        parser.add_argument('--n', default=1, type=int, help='images to generate')
+        parser.add_argument('--x_dim', default=2048, type=int, help='out image width')
+        parser.add_argument('--y_dim', default=2048, type=int, help='out image height')
+        parser.add_argument('--scale', default=10, type=float, help='mutiplier on z')
+        parser.add_argument('--c_dim', default=1, type=int, help='channels')
+        parser.add_argument('--net', default=32, type=int, help='net width')
+        parser.add_argument('--batch_size', default=1, type=int)
+        parser.add_argument('--interpolation', default=10, type=int)
+        parser.add_argument('--reinit', default=10, type=int, help='reinit generator every so often')
+        parser.add_argument('--exp', default='.', type=str, help='output fn')
+        parser.add_argument('--name_style', default='params', type=str, help='output fn')
+        parser.add_argument('--walk', action='store_true', help='interpolate')
+        parser.add_argument('--sample', action='store_true', help='sample n images')
+        parser.add_argument('--audio_file', default='', type=str, help='(optional) audio file input')
+        parser.add_argument('--color_scheme', default='', type=str, help='(optional) warm or cool')
 
-    args = parser.parse_args()
+        args = parser.parse_args()
+
     return args
 
 
 class Generator(nn.Module):
     def __init__(self, args):
         super(Generator, self).__init__()
-        for k, v in vars(args).items():
-            setattr(self, k, v)
-        # try:  # Added this
-        #     for k, v in vars(args).items():
-        #         setattr(self, k, v)
-        # except:  # Input dictionary instead
-        #     self.x_dim = args['x_dim']
-        #     self.y_dim = args['y_dim']
-        #     self.net = args['net']
-        #     self.c_dim = args['c_dim']
-        #     self.batch_size = args['batch_size']
-        #     self.scale = args['scale']
-        #     self.z = args['z']
-        #     self.color_scheme = args['color_scheme']
+        try:  # Added this
+            for k, v in vars(args).items():
+                setattr(self, k, v)
+        except:  # Input dictionary instead
+            self.x_dim = args['x_dim']
+            self.y_dim = args['y_dim']
+            self.net = args['net']
+            self.c_dim = args['c_dim']
+            self.batch_size = args['batch_size']
+            self.scale = args['scale']
+            self.z = args['z']
+            self.color_scheme = args['color_scheme']
         self.name = 'Generator'
         dim = self.x_dim * self.y_dim * self.batch_size
         self.linear_z = nn.Linear(self.z, self.net)
@@ -162,7 +180,14 @@ def latent_walk(args, z1, z2, n_frames, netG):
     return states  # Returns multiple imageio imgs
 
 
-def cppn(args):
+def cppn(args=None):
+    # Add the remaining default args
+    if args:
+        args = load_args(args)
+    # Create args object for running the program on its own
+    else:
+        args = load_args()
+
     seed = np.random.randint(123456789)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -172,16 +197,16 @@ def cppn(args):
     subdir = args.exp
     if not os.path.exists('trials/'+subdir):
         os.makedirs('trials/'+subdir)
-    else:
-        while os.path.exists('trials/'+subdir):
-            response = input('Exp Directory Exists, rename (y/n/overwrite):\t')
-            if response == 'y':
-                subdir = input('New Exp Directory Name:\t')
-            elif response == 'overwrite':
-                break
-            else:
-                sys.exit(0)
-        os.makedirs('trials/'+subdir, exist_ok=True)
+    # else:
+    #     while os.path.exists('trials/'+subdir):
+    #         response = input('Exp Directory Exists, rename (y/n/overwrite):\t')
+    #         if response == 'y':
+    #             subdir = input('New Exp Directory Name:\t')
+    #         elif response == 'overwrite':
+    #             break
+    #         else:
+    #             sys.exit(0)
+    #     os.makedirs('trials/'+subdir, exist_ok=True)
 
     if args.name_style == 'simple':
         suff = 'image'
@@ -199,7 +224,7 @@ def cppn(args):
             start = 0
             end = sample_rate
             t = len(x)
-            seconds = len(x) / sample_rate  # Seconds in the video
+            seconds = round(len(x) / sample_rate)  # Seconds in the video
             features = np.empty(0, dtype=np.float32)
             while end <= t:
                 segment = x[start: end]
@@ -230,11 +255,6 @@ def cppn(args):
 
         n_images = len(zs)
 
-        # from audio_loader import load_audio
-        # sound, fs = load_audio(args.audio_file)
-        # print(f'Sample rate is {fs} (44100 is recommended)')
-        # print('length of sound array', len(sound))
-
     # Create z latent vector randomly
     else:
         for _ in range(n_images):
@@ -247,7 +267,7 @@ def cppn(args):
             # z_tensor.shape  ([1, 8])  [1, args.z]
 
     if args.walk:
-        k = 0
+        frames_created = 0
         for i in range(n_images):
             if i+1 not in range(n_images):
                 images = latent_walk(args, zs[i], zs[0], args.interpolation, netG)
@@ -256,13 +276,20 @@ def cppn(args):
 
             for img in images:
                 # Pad with zeros to ensure picutres are in proper order
-                save_fn = 'trials/{}/{}_{}'.format(subdir, suff, str(k).zfill(7))
-                print ('saving PNG image at: {}'.format(save_fn))
+                save_fn = 'trials/{}/{}_{}'.format(subdir, suff, str(frames_created).zfill(7))
+                # print ('saving PNG image at: {}'.format(save_fn))
                 imwrite(save_fn+'.png', img)  # imageio function
-                k += 1
+                frames_created += 1
             print ('walked {}/{}'.format(i+1, n_images))
-        print('total imgs: ', k)
-        print('seconds ', seconds)
+
+        # If inputing audio, return the number of seconds video should last
+        try:
+            print('TOTALFRAMES: ', frames_created)
+            print('SECONDS ', seconds)
+            return frames_created, seconds
+
+        except:
+            return frames_created
 
     elif args.sample:
         zs, _ = torch.stack(zs).sort()
@@ -295,18 +322,4 @@ def cppn(args):
 
 
 if __name__ == '__main__':
-    args = load_args()
-    cppn(args)
-
-    # # Create video from imgs
-    # fps = 6  # 7
-    # os.system(f"ffmpeg -framerate {fps} -pattern_type glob -i 'trials/*.png' -c:v libx264 -pix_fmt yuv420p -crf 23 temp.mp4")
-    # # Overlay music over video
-    # if args.audio_file:
-    #     # os.system(f'ffmpeg -i temp.mp4 -i {args.audio_file} -c copy -map 0:v:0 -map 1:a:0 {output_file_name}')
-    #     os.system(f'ffmpeg -i temp.mp4 -i {args.audio_file} -c:v copy -map 0:v -map 1:a -y {output_file_name}')
-    # else:
-    #     os.system(f'mv temp.mp4 {output_file_name}')
-    # print(f'File created as {output_file_name}')
-
-    # os.system('ffmpeg -r ' + str(fps) + ' -f image2 -s 64x64 -i frames/%06d.png -i ' + audiopath + ' -crf 25 -vcodec libx264 -pix_fmt yuv420p ' + vidpath)
+    cppn()
