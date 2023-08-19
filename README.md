@@ -4,12 +4,12 @@ Clone the repo
 Change directory  
 `cd meditation_induction_ai`
 #### Install packages
-Start in your base conda environment  
-`conda env update -f environment.yml`  
+Create conda environment
+`conda create -n med_ai python==3.9`  
 Activate environment  
-`conda activate cppn`  
-Install extra packages  
-`pip install gTTS pydub`
+`conda activate med_ai`  
+Install packages
+`pip install -r requirements.txt`
 
 ### Explanation of Program
 Generate a meditation video with speech (and optionally music) using AI models.
