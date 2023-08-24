@@ -1,12 +1,8 @@
 import os
-# import pyttsx3
-from gtts import gTTS
-import torch
-import numpy as np
 import math
-# import time
+from gtts import gTTS
 from pydub import AudioSegment
-# import re
+# import pyttsx3
 
 
 def text_to_speech(meditation_script, accent):
