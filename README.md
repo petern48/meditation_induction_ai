@@ -8,7 +8,7 @@ Change directory
 Create conda environments with proper packages
 `conda create --name med_ai --file requirements-conda.txt`
 
-#### Alternative without conda
+#### Alternative using pip
 Create conda environment (optional but recommended)
 `conda create -n med_ai python==3.9`  
 Activate environment  
@@ -16,7 +16,7 @@ Activate environment
 Install packages
 `pip install -r requirements.txt`
 
-### Explanation of Program
+### Program Explanation
 Generate a meditation video with speech (and optionally music) using AI models.
 Text Generation: Generate a meditation script by specifying the desired type of meditation.
 Text to Audio: Create speech for the text and (optionally add music) to it.
@@ -34,8 +34,8 @@ To improve speed, remove all files in the trials directory before running the pr
 Produce a meditation by providing a *med_type* (see below)  
 `python main.py --med_type [med_type]`
 
-Run the program while skipping the text generation  
-`python main.py --med_type [med_type] --script_file [text_file]`
+Run the program while skipping the text generation
+`python main.py --script_file [text_file]`
 
 Afterwards, the resulting file (`out_file`) will contain the video
 
