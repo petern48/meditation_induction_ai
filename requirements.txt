@@ -1,3 +1,10 @@
+# sudo apt install ffmpeg  # for pydub
+# !pip install gTTS pydub
+
+# !pip install transformers einops accelerate xformers
+# !pip install torch  # with cuda
+# !pip install scipy==1.10 tifffile imageio==2.19.3 librosa==0.10.1 resampy numpy==1.23.5
+
 absl-py==1.4.0
 accelerate==0.21.0
 asttokens==2.2.1
