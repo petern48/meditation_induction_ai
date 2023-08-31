@@ -67,7 +67,7 @@ def load_args(args=None):
 class Generator(nn.Module):
     def __init__(self, args):
         super(Generator, self).__init__()
-        try:  # Added this
+        try:  # Input argparse type
             for k, v in vars(args).items():
                 setattr(self, k, v)
         except:  # Input dictionary instead
