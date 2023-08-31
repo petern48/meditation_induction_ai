@@ -63,13 +63,15 @@ Default: 3
 - `--x_dim` [optional] Specify the x size of images  
 Default: 256
 
-- `--y_dim` [optional]
-Specify the y size of images  
+- `--y_dim` [optional] Specify the y size of images  
 Default: 256
 
-- `--out_file` [optional]
-Specify the name of the output file  
+- `--out_file` [optional] Specify the name of the output file  
 Default: med_video.mp4
+
+- `--color_scheme` [optional] Specify `cool` for a cool color scheme (good for relaxation) or `warm` for a warm color schem (good for energy and focus)
+
+
 
 ### Types of Meditation
 - `focused` focus on each of the 5 senses  
@@ -91,5 +93,5 @@ Benefits: improve mind body connection, energy, vitality, and systems of the bod
 Original CPPN model taken from https://github.com/neale/CPPN
 
 Inspiration taken from the following articles  
-https://nenadmarkus.com/p/visualizing-audio-with-cppns/
+https://nenadmarkus.com/p/visualizing-audio-with-cppns/  
 https://blog.otoro.net/2016/03/25/generating-abstract-patterns-with-tensorflow/
