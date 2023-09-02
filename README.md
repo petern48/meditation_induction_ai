@@ -1,3 +1,8 @@
+![Cool Image](/examples/cool-cppn-img.png) &nbsp;
+![Gif of Video](/examples/cppn.gif) &nbsp;
+![Warm Image](/examples/warm-cppn-img.png)]
+
+
 # meditation_induction_ai
 Clone the repo  
 `git clone https://github.com/petern48/meditation_induction_ai.git`  
