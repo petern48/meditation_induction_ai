@@ -16,6 +16,10 @@ torchvision = "==0.15.2"
 bitsandbytes = "==0.41.1"
 scipy = "==1.11.2"
 xformers = "==0.0.21"
+librosa = "==0.10.1"
+tifffile = "==2023.8.12"
+imageio = "==2.19.3"
+resampy = "==0.4.2"
 
 [dev-packages]
 

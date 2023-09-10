@@ -2,7 +2,7 @@ import argparse
 import glob
 import os
 
-# from src.cppn import cppn
+from src import cppn
 from src.text_generation import text_generation
 from src.text_to_audio import text_to_speech, overlay_music_and_speech
 
@@ -13,8 +13,6 @@ def load_args():
     parser.add_argument('--med_type', type=str,
                         choices=['focused', 'body-scan', 'visualization', 'reflection', 'movement'],
                         help="type of meditation: '[focused] [body-scan] [visualization] [reflection] [movement]")
-    parser.add_argument('--out_file',
-                        help='output file name')
     # Default arguments
     parser.add_argument('--script_file', type=str, default='',
                         help='input script to skip text generation, hence, there is no script generation')
@@ -33,9 +31,7 @@ def load_args():
     parser.add_argument('--no_music', action='store_true',
                         help='(optional) skip background music')
     # Skip generation
-    parser.add_argument('--skip_audio_generation', action='store_false',
-                        help='skip audio generation')
-    parser.add_argument('--skip_cppn_generation', action='store_false',
+    parser.add_argument('--skip_cppn_generation', action='store_true',
                         help='skip cppn generation')
 
     args = parser.parse_args()
@@ -82,71 +78,62 @@ def main():
     ##################
     # Text-to-speech #
     ##################
-    if args.skip_audio_generation:
-        audio_filename = f"data/{args.med_type}_meditation_audio_{args.accent}.mp3"
-        text_to_speech(script, args.accent, audio_filename)
+    audio_filename = f"data/{args.med_type}_meditation_audio_{args.accent}.mp3"
+    text_to_speech(script, args.accent, audio_filename)
 
-        # Adding background music
-        if not os.path.isfile(args.music_file):
-            raise Exception('Music file not found')
-        audio_background_filename = f"data/{args.med_type}_meditation_audio_{args.accent}_background_music.mp3"
-        overlay_music_and_speech(audio_filename, args.music_file, audio_background_filename)
+    # Adding background music
+    if not os.path.isfile(args.music_file):
+        raise Exception('Music file not found')
+    audio_background_filename = f"data/{args.med_type}_meditation_audio_background_music.mp3"
+    overlay_music_and_speech(audio_filename, args.music_file, audio_background_filename)
 
-    ####################
-    # Video generation #
-    ####################
+    # ####################
+    # # Video generation #
+    # ####################
     if not args.skip_cppn_generation:
-        pass
 
-    # imgs_dir = 'data/trials'
+        inter = 25
+        scale = 100
+        temp_file = 'temp-file.mp4'
+        trials_dir = 'data/trials'
 
-    # # Ensure trials directory is empty
-    # files = glob.glob(f'{imgs_dir}/*')
-    # for f in files:
-    #     os.remove(f)
+        # Ensure trials directory is empty
+        files = glob.glob(f'{trials_dir}/*')
+        for f in files:
+            os.remove(f)
 
-    # # Generations images
-    # frames_created, seconds = cppn.cppn(
-    #     interpolation=25,
-    #     c_dim=args.channels,
-    #     audio_file=audio_file_name,
-    #     scale=100
-    # )
-    # fps = round(frames_created / seconds)
-    # print('frames_created', frames_created)
-    # print('seconds', seconds)
-    # print('fps', fps)
+        x_dim = args.x_dim
+        y_dim = args.y_dim
+        color_scheme = args.color_scheme
 
+        print('Creating imgs using cppn')
+        frames_created, seconds = cppn.cppn(
+            interpolation=inter,
+            c_dim=args.channels,
+            audio_file=audio_background_filename,
+            scale=scale,
+            trials_dir=trials_dir,
+            x_dim=x_dim,
+            y_dim=y_dim,
+            color_scheme=color_scheme
+        )
+        fps = round(frames_created / seconds)
+        print('frames_created', frames_created)
+        print('seconds', seconds)
+        print('fps', fps)
 
+        # Compile imgs into video
+        print('\nCompiling imgs into video')
+        os.system(f"ffmpeg -framerate {fps} -pattern_type glob -i '{trials_dir}/*.png' -pix_fmt yuv420p \
+                -c:v libx264 -crf 23 {temp_file}")
 
+        # Add audio to video
+        print('\nAdding audio to video')
+        output_filename = f"output/{args.med_type}_meditation_audio_background_music.mp4"
+        os.system(f'ffmpeg -i {temp_file} -i {audio_background_filename} -c:v copy -map 0:v -map 1:a \
+                -y {output_filename}')
 
-
-
-    # # Input audio into cppn to create imgs
-    # cmd = f'echo overwrite | python cppn.py --walk --x_dim {args.x_dim} --y_dim {args.y_dim} \
-    #           --c_dim {args.c_dim} --interpolation {inter} --scale {scale}'
-    # # # Input only speech into CPPN
-    # #   --audio_file {speech_only_file}
-    # if audio_file_name:
-    #     cmd += f'--audio_file {audio_file_name}'
-    # if args.color_scheme:
-    #     cmd += f' --color_scheme {args.color_scheme}'
-    # # cmd += ' > /dev/null'
-    # # os.system(cmd)
-
-
-
-
-    # Images to video
-    # print('\nCompiling imgs into video')
-    # os.system(f"ffmpeg -framerate {fps} -pattern_type glob -i '{imgs_dir}/*.png' -pix_fmt yuv420p \
-    #           -c:v libx264 -crf 23 {temp_file}")
-
-    # Add audio to video
-    # print('\nAdding audio to video')
-    # os.system(f'ffmpeg -i {temp_file} -i {audio_file_name} -c:v copy -map 0:v -map 1:a \
-    #           -y {args.out_file}')  #  > /dev/null 2> /dev/null
-    # os.system(f'rm {temp_file}')
+        os.system(f'rm {temp_file}')
 
 
 if __name__ == '__main__':

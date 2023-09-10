@@ -5,7 +5,7 @@
 
 # meditation_induction_ai
 Clone the repo  
-`git clone https://github.com/petern48/meditation_induction_ai.git`  
+`git clone https://github.com/javiferfer/meditation_system_ai.git`
 Change directory  
 `cd meditation_induction_ai`
 
@@ -27,7 +27,7 @@ Text to Audio: Create speech for the text and (optionally add music) to it.
 Video Generation: Generate relaxing visuals by inputting audio into a Compositional Pattern Producing Network (CPPN)
 
 Select a type of meditation from the following list:
-[focused]  [body-scan]  [visualization]  [reflection]  [movement]
+[focused] [body-scan] [visualization] [reflection] [movement]
 The program will generate a script for the meditation, feed that script to create audio, and feed that
 audio into the CPPN to generate a video. The video will come with the audio and (optional) music. 
 
