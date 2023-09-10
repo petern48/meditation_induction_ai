@@ -19,26 +19,32 @@ BLUE = 2
 class Generator(nn.Module):
     def __init__(
         self,
-        x_dim,
-        y_dim,
         net,
-        c_dim,
         batch_size,
         scale,
         z,
-        color_scheme,  
+        color_scheme,
+        x_dim,
+        y_dim,
+        c_dim,
     ):
-        super(Generator, self).__init__()
-        self.x_dim = x_dim
-        self.y_dim = y_dim
-        self.net = net
-        self.c_dim = c_dim
+        super(Generator, self).__init__()        
+
+        self.net = net        
         self.batch_size = batch_size
-        self.scale = scale
-        self.z = z
         self.color_scheme = color_scheme
 
-        self.name = 'Generator'
+        # Latent space width
+        self.z = z
+
+        # Multiplier on z
+        self.scale = scale
+        
+        # Output image [x_dim: width, y_dim: height, c_dim: channels]
+        self.x_dim = x_dim
+        self.y_dim = y_dim
+        self.c_dim = c_dim
+
         self.linear_z = nn.Linear(self.z, self.net)
         self.linear_x = nn.Linear(1, self.net, bias=False)
         self.linear_y = nn.Linear(1, self.net, bias=False)
@@ -48,17 +54,16 @@ class Generator(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, inputs):
-        x, y, z, r = inputs  # The following shapes are for 256x256
-        # x.shape, y.shape, r.shape # ([1, 65536, 1]), z.shape is [8] z_dim, 
-        n_points = self.x_dim * self.y_dim  # 256 * 256 = 65536
-        ones = torch.ones(n_points, 1, dtype=torch.float)  # [.shape 65536,1]
-        # z.shape ([1, 8])
+        x, y, z, r = inputs
+        n_points = self.x_dim * self.y_dim
+        ones = torch.ones(n_points, 1, dtype=torch.float)
+
         z_scaled = z.view(self.batch_size, 1, self.z) * ones * self.scale
-        # z_scaled.shape ([1, 65336, 8])
         z_pt = self.linear_z(z_scaled.view(self.batch_size*n_points, self.z))  # torch.tensor.view change shape
         x_pt = self.linear_x(x.view(self.batch_size*n_points, -1))
         y_pt = self.linear_y(y.view(self.batch_size*n_points, -1))
         r_pt = self.linear_r(r.view(self.batch_size*n_points, -1))
+
         U = z_pt + x_pt + y_pt + r_pt
         H = torch.tanh(U)
         x = self.linear_h(H)
@@ -66,33 +71,32 @@ class Generator(nn.Module):
         H = F.softplus(self.linear_h(H))
         H = torch.tanh(self.linear_h(H))
         x = .5 * torch.sin(self.linear_out(H)) + .5
+
         img = x.reshape(self.batch_size, self.y_dim, self.x_dim, self.c_dim)
-        # print ('G out: ', img.shape)  # [1, 256, 256, 3]
-        # Scale by 255
+
+        # Scaled by 255
         img *= 255
-        if self.color_scheme:  # imageio is RGB
-            if self.color_scheme == 'warm':
-                # Reduce the green and blue values
-                img[:, :, :, RED] *= 1.3
-                img[:, :, :, GREEN] *= 1.0
-                img[:, :, :, BLUE] *= 0.7
-            elif self.color_scheme == 'cool':
-                img[:, :, :, RED] *= 0.7
-                img[:, :, :, GREEN] *= 1.0
-                img[:, :, :, BLUE] *= 1.3
-            else:
-                print("Invalid Color Scheme. Exiting...")
-                sys.exit(0)
+        if self.color_scheme == 'warm':
+            # Reduce the green and blue values
+            img[:, :, :, RED] *= 1.3
+            img[:, :, :, GREEN] *= 1.0
+            img[:, :, :, BLUE] *= 0.7
+        elif self.color_scheme == 'cool':
+            img[:, :, :, RED] *= 0.7
+            img[:, :, :, GREEN] *= 1.0
+            img[:, :, :, BLUE] *= 1.3
+        else:
+            raise Exception("Invalid Color Scheme. Exiting...")
 
         img[img > 255] = 255  # Ensure values are under 255
         return img
 
 
 def coordinates(
+    batch_size,
+    scale,
     x_dim,
     y_dim,
-    scale,
-    batch_size,
 ):
     """ These represent the x-coords, y-coords, and radial distances of points in 2D space """
     n_points = x_dim * y_dim  # total number of points in 2D space
@@ -113,18 +117,18 @@ def coordinates(
 
 def sample(
     netG,
+    scale,
+    batch_size,
     z,
     x_dim,
     y_dim,
-    scale,
-    batch_size,
 ):
     """ Function is called like this: sample(args, netG, z)[0]*255 """
     x_vec, y_vec, r_vec = coordinates(
-        x_dim,
-        y_dim,
-        scale,
-        batch_size,                       
+        batch_size=batch_size,
+        scale=scale,
+        x_dim=x_dim,
+        y_dim=y_dim,                      
     )
     image = netG((x_vec, y_vec, z, r_vec))
     return image
@@ -140,28 +144,29 @@ def init(model):
 # z1 is a tensor as a starting point, z2 is the ending point
 # n_frames = # of intermediate steps -> program inputs args.interpolation
 def latent_walk(
+    netG,
     z1,
     z2,
     n_frames,
-    netG,
-    x_dim,
-    y_dim,
     scale,
     batch_size,
+    x_dim,
+    y_dim,
 ):
     delta = (z2 - z1) / (n_frames + 1)
     total_frames = n_frames + 2  # plus 2 for the starting and ending points
-    states = []  # holds the imgs
+
+    states = []
     for i in range(total_frames):
         z = z1 + delta * float(i)  # shape [1,8]
         states.append(
             sample(
-                netG,
-                z,
-                x_dim,
-                y_dim,
-                scale,
-                batch_size,
+                netG=netG,
+                scale=scale,
+                batch_size=batch_size,
+                z=z,
+                x_dim=x_dim,
+                y_dim=y_dim,
             )[0]*255
         )
     states = torch.stack(states).detach().numpy()  # concatenates elements in list to a torch tensor
@@ -215,14 +220,14 @@ def cppn(
     suff = 'z-{}_scale-{}_cdim-{}_net-{}'.format(z, scale, c_dim, net)
 
     netG = init(Generator(
-        x_dim,
-        y_dim,
-        net,
-        c_dim,
-        batch_size,
-        scale,
-        z,
-        color_scheme,
+        net=net,
+        batch_size=batch_size,
+        scale=scale,
+        z=z,
+        color_scheme=color_scheme,
+        x_dim=x_dim,
+        y_dim=y_dim,
+        c_dim=c_dim,
     ))
     zs = []
 
@@ -234,30 +239,30 @@ def cppn(
     for i in range(n_images):
         if i+1 not in range(n_images):
             images = latent_walk(
-                zs[i],
-                zs[0],
-                interpolation,
-                netG,
-                x_dim,
-                y_dim,
-                scale,
-                batch_size,
+                netG=netG,
+                z1=zs[i],
+                z2=zs[0],
+                n_frames=interpolation,
+                scale=scale,
+                batch_size=batch_size,
+                x_dim=x_dim,
+                y_dim=y_dim,
             )
             break
         images = latent_walk(
-            zs[i],
-            zs[i+1],
-            interpolation,
-            netG,
-            x_dim,
-            y_dim,
-            scale,
-            batch_size,
+            netG=netG,
+            z1=zs[i],
+            z2=zs[i+1],
+            n_frames=interpolation,
+            scale=scale,
+            batch_size=batch_size,
+            x_dim=x_dim,
+            y_dim=y_dim,
         )
 
         for img in images:
             # Pad with zeros to ensure picutres are in proper order
-            save_fn = 'data/trials/{}/{}_{}'.format('.', suff, str(frames_created).zfill(7))
+            save_fn = f'{trials_dir}/./{suff}_{str(frames_created).zfill(7)}'
             imwrite(save_fn+'.png', img)  # imageio function
             frames_created += 1
         print('walked {}/{}'.format(i+1, n_images))
