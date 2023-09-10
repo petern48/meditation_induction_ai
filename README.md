@@ -10,16 +10,15 @@ Change directory
 `cd meditation_induction_ai`
 
 #### Install packages
-Create conda environments with proper packages
-`conda create --name med_ai --file requirements-conda.txt`
+Install the dependencies:
+`pipenv install`
+Activate the Python virtual environment:
+`pipenv shell`
 
-#### Alternative using pip
-Create conda environment (optional but recommended)
-`conda create -n med_ai python==3.9`  
-Activate environment  
-`conda activate med_ai`  
-Install packages
-`pip install -r requirements.txt`
+Activating the virtual environment allows you to work within an isolated environment where the dependencies you installed with pipenv install are available. This ensures that your project uses the correct versions of packages and avoids conflicts with system-wide packages.
+
+Also, it is necessary to install:
+`sudo apt install ffmpeg`
 
 ### Program Explanation
 Generate a meditation video with speech (and optionally music) using AI models.

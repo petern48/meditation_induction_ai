@@ -1,14 +1,15 @@
+import argparse
 import os
 import sys
-import argparse
+import librosa
+import logging
 import numpy as np
 import torch
 import tifffile
-import librosa
 
 from torch import nn
 from torch.nn import functional as F
-from imageio import imwrite, imsave
+from imageio import imwrite
 
 RED = 0
 GREEN = 1
@@ -16,7 +17,6 @@ BLUE = 2
 
 np.set_printoptions(threshold=100)
 # Because imageio uses the root logger instead of warnings package...
-import logging
 logging.getLogger().setLevel(logging.ERROR)
 
 
@@ -80,7 +80,6 @@ class Generator(nn.Module):
             self.z = args['z']
             self.color_scheme = args['color_scheme']
         self.name = 'Generator'
-        dim = self.x_dim * self.y_dim * self.batch_size
         self.linear_z = nn.Linear(self.z, self.net)
         self.linear_x = nn.Linear(1, self.net, bias=False)
         self.linear_y = nn.Linear(1, self.net, bias=False)
@@ -88,7 +87,6 @@ class Generator(nn.Module):
         self.linear_h = nn.Linear(self.net, self.net)
         self.linear_out = nn.Linear(self.net, self.c_dim)
         self.sigmoid = nn.Sigmoid()
-
 
     def forward(self, inputs):
         x, y, z, r = inputs  # The following shapes are for 256x256
@@ -126,8 +124,8 @@ class Generator(nn.Module):
             else:
                 print("Invalid Color Scheme. Exiting...")
                 sys.exit(0)
-        
-        img[img>255] = 255  # Ensure values are under 255
+
+        img[img > 255] = 255  # Ensure values are under 255
         return img
 
 
@@ -197,16 +195,6 @@ def cppn(args=None):
     subdir = args.exp
     if not os.path.exists('trials/'+subdir):
         os.makedirs('trials/'+subdir)
-    # else:
-    #     while os.path.exists('trials/'+subdir):
-    #         response = input('Exp Directory Exists, rename (y/n/overwrite):\t')
-    #         if response == 'y':
-    #             subdir = input('New Exp Directory Name:\t')
-    #         elif response == 'overwrite':
-    #             break
-    #         else:
-    #             sys.exit(0)
-    #     os.makedirs('trials/'+subdir, exist_ok=True)
 
     if args.name_style == 'simple':
         suff = 'image'
@@ -220,7 +208,7 @@ def cppn(args=None):
 
     if args.audio_file:
         def feature_extraction(file_path, num_mfcc):
-            x, sample_rate = librosa.load(file_path, res_type='kaiser_fast')  # TODO: See if i can choose the sample rate
+            x, sample_rate = librosa.load(file_path, res_type='kaiser_fast')
             start = 0
             end = sample_rate
             t = len(x)
@@ -248,7 +236,6 @@ def cppn(args=None):
             features /= max_val
             features = torch.from_numpy(features)
             return features, seconds
-
 
         print('args.audio_file', args.audio_file)
         zs, seconds = feature_extraction(args.audio_file, args.z)
@@ -280,14 +267,13 @@ def cppn(args=None):
                 # print ('saving PNG image at: {}'.format(save_fn))
                 imwrite(save_fn+'.png', img)  # imageio function
                 frames_created += 1
-            print ('walked {}/{}'.format(i+1, n_images))
+            print('walked {}/{}'.format(i+1, n_images))
 
         # If inputing audio, return the number of seconds video should last
         try:
             print('TOTALFRAMES: ', frames_created)
             print('SECONDS ', seconds)
             return frames_created, seconds
-
         except:
             return frames_created
 
@@ -309,15 +295,14 @@ def cppn(args=None):
                             net=str(args.net))
 
             save_fn = 'trials/{}/{}_{}'.format(subdir, suff, i)
-            print ('saving TIFF/PNG image pair at: {}'.format(save_fn))
+            print('saving TIFF/PNG image pair at: {}'.format(save_fn))
             tifffile.imsave(save_fn+'.tif',
                             img.astype('u1'),
                             metadata=metadata)
-            imwrite(save_fn+'.png'.format(subdir, suff, i), img)
+            imwrite(save_fn + '.png'.format(subdir, suff, i), img)
     else:
-        print ('No action selected. Exiting...')
-        print ('If this is an error, check command line arguments for ' \
-                'generating images')
+        print('No action selected. Exiting...')
+        print('If this is an error, check command line arguments for generating images')
         sys.exit(0)
 
 

@@ -1,11 +1,3 @@
-trials/
-frames/
-gtts*
-med_video.mp4
-unused_files/
-*.docx
-
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

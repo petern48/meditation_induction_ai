@@ -1,0 +1,23 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+transformers = "==4.31.0"
+torch = "==2.0.1"
+gtts = "==2.3.2"
+pydub = "==0.25.1"
+einops = "==0.6.1"
+accelerate = "==0.22.0"
+ffmpeg-python = "==0.2.0"
+torchaudio = "==2.0.2"
+torchvision = "==0.15.2"
+bitsandbytes = "==0.41.1"
+scipy = "==1.11.2"
+xformers = "==0.0.21"
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"
