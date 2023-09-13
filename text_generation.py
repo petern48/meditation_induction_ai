@@ -1,4 +1,5 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import GPT2LMHeadModel,  GPT2Tokenizer
 import transformers
 import torch
 
@@ -43,3 +44,59 @@ def text_generation(selected_type):
         response = '\n'.join(output.split('\n')[1:])
 
     return response
+
+# def falcon_model(selected_type):
+
+
+
+def saved_model(selected_type="body-scan"):
+    model_dir = './saved_model/'
+    model = GPT2LMHeadModel.from_pretrained(model_dir)
+    tokenizer = GPT2Tokenizer.from_pretrained(model_dir)
+
+    device = torch.device("cpu")  # USING CPU FOR NOW
+
+    model.to(device)
+    model.eval()
+    # prompt = f"<|startoftext|> [{selected_type.upper()} MEDITATION] Welcome This {selected_type} meditation script is designed for..."
+
+    prompt = "<|startoftext|> [BODY-SCAN MEDITATION] Welcome. This body scan meditation script is designed for preparing you for sleep. Start by flexing and relaxing your"
+    # prompt = "<|startoftext|> [BODY-SCAN MEDITATION]"
+
+
+    # end_prompt = "Thank you for joining me for this meditation."
+
+    input_tensor = torch.tensor(tokenizer.encode(prompt)).unsqueeze(0).to(device)
+
+    # end_input_tensor = torch.tensor(tokenizer.encode(end_prompt)).unsqueeze(0).to(device)
+
+    sample_outputs = model.generate(
+                                    input_tensor,
+                                    #bos_token_id=random.randint(1,30000),
+                                    do_sample=True,
+                                    top_k=1000,
+                                    max_length = 300,
+                                    top_p=0.95,
+                                    num_return_sequences=1
+                                    )
+
+    # end_outputs = model.generate(
+    #                                 end_input_tensor,
+    #                                 #bos_token_id=random.randint(1,30000),
+    #                                 do_sample=True,
+    #                                 top_k=1000,
+    #                                 max_length = 300,
+    #                                 top_p=0.95,
+    #                                 num_return_sequences=1
+    #                                 )
+
+    for i, sample_output in enumerate(sample_outputs):
+        print("{}: {}\n\n".format(i, tokenizer.decode(sample_output)))#, skip_special_tokens=True)))
+
+    # for i, sample_output in enumerate(end_outputs):
+    #     print("{}: {}\n\n".format(i, tokenizer.decode(sample_output)))#, skip_special_tokens=True)))
+
+
+
+if __name__=='__main__':
+    saved_model()
