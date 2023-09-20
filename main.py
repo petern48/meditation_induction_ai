@@ -30,9 +30,11 @@ def load_args():
                         help='(optional) warm or cool')
     parser.add_argument('--no_music', action='store_true',
                         help='(optional) skip background music')
-    # Skip generation
+    # Skip
     parser.add_argument('--skip_cppn_generation', action='store_true',
                         help='skip cppn generation')
+    parser.add_argument('--skip_background_music', action='store_true',
+                        help='skip background music')
 
     args = parser.parse_args()
     return args
@@ -41,6 +43,10 @@ def load_args():
 def main():
     # Load Arguments and check if valid
     args = load_args()
+    
+    print(args.skip_cppn_generation)
+    print(args.skip_background_music)
+
 
     if args.channels != 1 and args.channels != 3:
         print('Invalid number of channels. Must be (1) for black/white or (3) for RGB')
@@ -81,11 +87,14 @@ def main():
     audio_filename = f"data/{args.med_type}_meditation_audio_{args.accent}.mp3"
     text_to_speech(script, args.accent, audio_filename)
 
-    # Adding background music
-    if not os.path.isfile(args.music_file):
-        raise Exception('Music file not found')
-    audio_background_filename = f"data/{args.med_type}_meditation_audio_background_music.mp3"
-    overlay_music_and_speech(audio_filename, args.music_file, audio_background_filename)
+    # Adding background music    
+    if not args.skip_background_music:
+        if not os.path.isfile(args.music_file):
+            raise Exception('Music file not found')
+        audio_output_filename = f"data/{args.med_type}_meditation_audio_background_music.mp3"
+        overlay_music_and_speech(audio_filename, args.music_file, audio_output_filename)
+    else:
+        audio_output_filename = audio_filename
 
     # ####################
     # # Video generation #
@@ -110,7 +119,7 @@ def main():
         frames_created, seconds = cppn.cppn(
             interpolation=inter,
             c_dim=args.channels,
-            audio_file=audio_background_filename,
+            audio_file=audio_output_filename,
             scale=scale,
             trials_dir=trials_dir,
             x_dim=x_dim,
@@ -130,7 +139,7 @@ def main():
         # Add audio to video
         print('\nAdding audio to video')
         output_filename = f"output/{args.med_type}_meditation_audio_background_music.mp4"
-        os.system(f'ffmpeg -i {temp_file} -i {audio_background_filename} -c:v copy -map 0:v -map 1:a \
+        os.system(f'ffmpeg -i {temp_file} -i {audio_output_filename} -c:v copy -map 0:v -map 1:a \
                 -y {output_filename}')
 
         os.system(f'rm {temp_file}')
