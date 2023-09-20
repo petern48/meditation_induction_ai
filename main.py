@@ -44,9 +44,11 @@ def main():
     # Load Arguments and check if valid
     args = load_args()
     
-    print(args.skip_cppn_generation)
-    print(args.skip_background_music)
-
+    # Creating data and output folders if not exist
+    if not os.path.exists('data'):
+        os.makedirs('data')
+    if not os.path.exists('output'):
+        os.makedirs('output')
 
     if args.channels != 1 and args.channels != 3:
         print('Invalid number of channels. Must be (1) for black/white or (3) for RGB')
@@ -137,7 +139,7 @@ def main():
                 -c:v libx264 -crf 23 {temp_file}")
 
         # Add audio to video
-        print('\nAdding audio to video')
+        print('\nAdding audio to video')      
         output_filename = f"output/{args.med_type}_meditation_audio_background_music.mp4"
         os.system(f'ffmpeg -i {temp_file} -i {audio_output_filename} -c:v copy -map 0:v -map 1:a \
                 -y {output_filename}')

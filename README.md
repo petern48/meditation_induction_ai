@@ -33,15 +33,21 @@ audio into the CPPN to generate a video. The video will come with the audio and 
 
 ### Run the program:
 To improve speed, remove all files in the trials directory before running the program  
-`rm trials/*`
+`rm data/trials/*`
 
 Produce a meditation by providing a *med_type* (see below)  
 `python main.py --med_type [med_type]`
+such as:
+`python main.py --med_type focused`
+
+By default, the background music will be added and cppn-based images will be generated unless you specify it as follows:
+- Skip background music: `python main.py --med_type [med_type] --skip_background_music`
+- Skip cppn-based image generation: `python main.py --med_type [med_type] --skip_cppn_generation`
 
 Run the program while skipping the text generation
-`python main.py --script_file [text_file]`
+`python main.py --med_type [med_type] --script_file [text_file]`
 
-Afterwards, the resulting file (`out_file`) will contain the video
+Afterwards, the resulting folder `output` will contain the script and video.
 
 ### Command Line Options
 
