@@ -1,10 +1,6 @@
-trials/
-frames/
-gtts*
-med_video.mp4
-unused_files/
-*.docx
-
+data/*
+output/*
+.vscode/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

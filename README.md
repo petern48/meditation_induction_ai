@@ -5,21 +5,20 @@
 
 # meditation_induction_ai
 Clone the repo  
-`git clone https://github.com/petern48/meditation_induction_ai.git`  
+`git clone https://github.com/javiferfer/meditation_system_ai.git`
 Change directory  
 `cd meditation_induction_ai`
 
 #### Install packages
-Create conda environments with proper packages
-`conda create --name med_ai --file requirements-conda.txt`
+Install the dependencies:
+`pipenv install`
+Activate the Python virtual environment:
+`pipenv shell`
 
-#### Alternative using pip
-Create conda environment (optional but recommended)
-`conda create -n med_ai python==3.9`  
-Activate environment  
-`conda activate med_ai`  
-Install packages
-`pip install -r requirements.txt`
+Activating the virtual environment allows you to work within an isolated environment where the dependencies you installed with pipenv install are available. This ensures that your project uses the correct versions of packages and avoids conflicts with system-wide packages.
+
+Also, it is necessary to install:
+`sudo apt install ffmpeg`
 
 ### Program Explanation
 Generate a meditation video with speech (and optionally music) using AI models.
@@ -28,18 +27,24 @@ Text to Audio: Create speech for the text and (optionally add music) to it.
 Video Generation: Generate relaxing visuals by inputting audio into a Compositional Pattern Producing Network (CPPN)
 
 Select a type of meditation from the following list:
-[focused]  [body-scan]  [visualization]  [reflection]  [movement]
+[focused] [body-scan] [visualization] [reflection] [movement]
 The program will generate a script for the meditation, feed that script to create audio, and feed that
 audio into the CPPN to generate a video. The video will come with the audio and (optional) music. 
 
 ### Run the program:
 Produce a meditation by providing a *med_type* (see below)  
 `python main.py --med_type [med_type]`
+such as:
+`python main.py --med_type focused`
+
+By default, the background music will be added and cppn-based images will be generated unless you specify it as follows:
+- Skip background music: `python main.py --med_type [med_type] --skip_background_music`
+- Skip cppn-based image generation: `python main.py --med_type [med_type] --skip_cppn_generation`
 
 Run the program while skipping the text generation
-`python main.py --script_file [text_file]`
+`python main.py --med_type [med_type] --script_file [text_file]`
 
-Afterwards, the resulting file (`out_file`) will contain the video
+Afterwards, the resulting folder `output` will contain the script and video.
 
 ### Command Line Options
 
