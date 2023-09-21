@@ -32,9 +32,6 @@ The program will generate a script for the meditation, feed that script to creat
 audio into the CPPN to generate a video. The video will come with the audio and (optional) music. 
 
 ### Run the program:
-To improve speed, remove all files in the trials directory before running the program  
-`rm data/trials/*`
-
 Produce a meditation by providing a *med_type* (see below)  
 `python main.py --med_type [med_type]`
 such as:
