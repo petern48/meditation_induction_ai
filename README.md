@@ -5,7 +5,7 @@
 
 # meditation_induction_ai
 Clone the repo  
-`git clone https://github.com/javiferfer/meditation_system_ai.git`
+`git clone https://github.com/petern48/meditation_induction_ai.git`  
 Change directory  
 `cd meditation_induction_ai`
 
