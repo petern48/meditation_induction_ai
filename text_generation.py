@@ -75,7 +75,7 @@ def saved_model(selected_type="body-scan"):
                                     #bos_token_id=random.randint(1,30000),
                                     do_sample=True,
                                     top_k=1000,
-                                    max_length = 300,
+                                    max_length = 512,
                                     top_p=0.95,
                                     num_return_sequences=1
                                     )
@@ -90,11 +90,8 @@ def saved_model(selected_type="body-scan"):
     #                                 num_return_sequences=1
     #                                 )
 
-    for i, sample_output in enumerate(sample_outputs):
-        print("{}: {}\n\n".format(i, tokenizer.decode(sample_output)))#, skip_special_tokens=True)))
-
-    # for i, sample_output in enumerate(end_outputs):
-    #     print("{}: {}\n\n".format(i, tokenizer.decode(sample_output)))#, skip_special_tokens=True)))
+    response = tokenizer.decode(sample_outputs[0], skip_special_tokens=True)
+    print(response)
 
 
 
