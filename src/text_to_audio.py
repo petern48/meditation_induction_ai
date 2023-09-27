@@ -2,6 +2,7 @@ from gtts import gTTS
 import math
 import os
 from pydub import AudioSegment
+import nltk
 
 
 def text_to_speech(meditation_script, accent, filename):
@@ -12,8 +13,11 @@ def text_to_speech(meditation_script, accent, filename):
     if accent not in ['com.au', 'co.uk', 'us', 'ca', 'co.in', 'ie', 'co.za']:
         raise Exception('Incorrect accent')
 
-    # Add longer pause after every period
-    segments = meditation_script.split('. ')
+    # segments = meditation_script.split('. ')
+    segments = nltk.sent_tokenize(meditation_script)
+
+
+    # Add longer pause after every sentence
     pause = AudioSegment.silent(duration=2000)  # milliseconds
     speech_audio = AudioSegment.empty()
     for segment in segments:
