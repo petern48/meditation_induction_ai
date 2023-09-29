@@ -289,7 +289,7 @@ def cppn(
                 z2=z2,
                 # n_frames=interpolation,
                 n_frames=frames_per_iter,
-                scale=scale, # * sentiment_scale,
+                scale=scale * sentiment_scale,
                 batch_size=batch_size,
                 x_dim=x_dim,
                 y_dim=y_dim,
