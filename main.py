@@ -87,7 +87,16 @@ def main():
     # Text-to-speech #
     ##################
     audio_filename = f"data/{args.med_type}_meditation_audio_{args.accent}.mp3"
-    text_to_speech(script, args.accent, audio_filename)
+
+    sr = 22050  # default librosa value
+
+    audio_segments, seconds_in_segments, sentiments, sentences, seconds = text_to_speech(
+        script,
+        args.accent,
+        audio_filename,
+        sr
+    )
+
 
     # Adding background music    
     if not args.skip_background_music:
@@ -104,7 +113,7 @@ def main():
     if not args.skip_cppn_generation:
 
         inter = 25
-        scale = 100
+        scale = 10  # 100
         temp_file = 'temp-file.mp4'
         trials_dir = 'data/trials'
 
@@ -117,8 +126,10 @@ def main():
         y_dim = args.y_dim
         color_scheme = args.color_scheme
 
+        fps = 25
+
         print('Creating imgs using cppn')
-        frames_created, seconds = cppn.cppn(
+        frames_created = cppn.cppn(  # removed seconds
             interpolation=inter,
             c_dim=args.channels,
             audio_file=audio_output_filename,
@@ -126,9 +137,14 @@ def main():
             trials_dir=trials_dir,
             x_dim=x_dim,
             y_dim=y_dim,
-            color_scheme=color_scheme
+            color_scheme=color_scheme,
+            audio_segments=audio_segments,
+            sentiments=sentiments,
+            seconds_in_segments=seconds_in_segments,
+            sample_rate=sr,
+            fps=fps
         )
-        fps = round(frames_created / seconds)
+        # fps = round(frames_created / seconds)
         print('frames_created', frames_created)
         print('seconds', seconds)
         print('fps', fps)
@@ -136,15 +152,17 @@ def main():
         # Compile imgs into video
         print('\nCompiling imgs into video')
         os.system(f"ffmpeg -framerate {fps} -pattern_type glob -i '{trials_dir}/*.png' -pix_fmt yuv420p \
-                -c:v libx264 -crf 23 {temp_file}")
+                -c:v libx264 -crf 23 {temp_file} -loglevel quiet")
 
         # Add audio to video
-        print('\nAdding audio to video')      
+        print('Adding audio to video')
         output_filename = f"output/{args.med_type}_meditation_audio_background_music.mp4"
         os.system(f'ffmpeg -i {temp_file} -i {audio_output_filename} -c:v copy -map 0:v -map 1:a \
-                -y {output_filename}')
+                -y {output_filename} -loglevel quiet')
 
         os.system(f'rm {temp_file}')
+
+    print(f'Completed. Video save at {output_filename}')
 
 
 if __name__ == '__main__':

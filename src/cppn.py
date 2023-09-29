@@ -173,26 +173,50 @@ def latent_walk(
     return states  # Returns multiple imageio imgs
 
 
-def feature_extraction(file_path, num_mfcc, z):
-    x, sample_rate = librosa.load(file_path, res_type='kaiser_fast')
+# Old feature extraction function
+# def feature_extraction(file_path, num_mfcc, z):
+#     x, sample_rate = librosa.load(file_path, res_type='kaiser_fast')
+#     start = 0
+#     end = sample_rate
+#     t = len(x)
+#     seconds = round(len(x) / sample_rate)  # Seconds in the video
+#     features = np.empty(0, dtype=np.float32)
+#     while end <= t:
+#         segment = x[start: end]
+#         mfcc = np.mean(librosa.feature.mfcc(y=segment, sr=sample_rate, n_mfcc=num_mfcc).T, axis=0)
+#         mfcc = np.reshape(mfcc, (1, z))
+#         features = np.append(features, mfcc)
+#         start = end
+#         end += sample_rate  # move forward by one second
+#     features = np.reshape(features, (-1, z))
+
+#     # Normalize vector by dividing them all by their max value
+#     max_val = np.amax(np.abs(features))
+#     features /= max_val
+#     features = torch.from_numpy(features)
+#     return features, seconds
+
+
+def feature_extraction(audio_segment, z, sample_rate):
     start = 0
     end = sample_rate
-    t = len(x)
-    seconds = round(len(x) / sample_rate)  # Seconds in the video
+    t = len(audio_segment)
     features = np.empty(0, dtype=np.float32)
     while end <= t:
-        segment = x[start: end]
-        mfcc = np.mean(librosa.feature.mfcc(y=segment, sr=sample_rate, n_mfcc=num_mfcc).T, axis=0)
+        segment = audio_segment[start: end]
+        mfcc = np.mean(librosa.feature.mfcc(y=segment, sr=sample_rate, n_mfcc=z).T, axis=0)
         mfcc = np.reshape(mfcc, (1, z))
         features = np.append(features, mfcc)
         start = end
-        end += sample_rate
-    features = np.reshape(features, (-1, z))
+        end += sample_rate  # move forward by one second
 
+    # Normalize vector by dividing them all by their max value
     max_val = np.amax(np.abs(features))
     features /= max_val
     features = torch.from_numpy(features)
-    return features, seconds
+
+    features = np.reshape(features, (-1, z))
+    return features
 
 
 def cppn(
@@ -203,7 +227,12 @@ def cppn(
     trials_dir,
     x_dim,
     y_dim,
-    color_scheme
+    color_scheme,
+    audio_segments,
+    sentiments,
+    seconds_in_segments,
+    sample_rate,
+    fps
 ):
     seed = np.random.randint(16)
     np.random.seed(seed)
@@ -229,45 +258,55 @@ def cppn(
         y_dim=y_dim,
         c_dim=c_dim,
     ))
-    zs = []
 
-    print('args.audio_file', audio_file)
-    zs, seconds = feature_extraction(audio_file, z, z)
+    print('args.audio_file: ', audio_file)
 
-    n_images = len(zs)
     frames_created = 0
+    n_images = len(audio_segments)
+
+    # for each sentence
     for i in range(n_images):
-        if i+1 not in range(n_images):
+        sentiment_scale = sentiments[i] - 1  # Range [0,2] scale up if positive. Scale down if negative.
+        zs = feature_extraction(audio_segments[i], z, sample_rate)
+        zs_length = len(zs)
+        seconds = seconds_in_segments[i]  # how long this sentence lasts in the audio
+        num_frames = seconds * fps  # currently a float but will get rounded
+        frames_per_iter = round(num_frames / zs_length) #  - 2  # latent_walk adds 2 frames for beginning and end
+        # print('Creating imgs for audio_segment', i)
+        # print(seconds, 'seconds')
+        # print(num_frames, 'num_frames')
+
+        for j in range(zs_length):
+            z1 = zs[j]
+            if j+1 not in range(zs_length):
+                z2 = zs[0]
+            else:
+                z2 = zs[j+1]
+
             images = latent_walk(
                 netG=netG,
-                z1=zs[i],
-                z2=zs[0],
-                n_frames=interpolation,
-                scale=scale,
+                z1=z1,
+                z2=z2,
+                # n_frames=interpolation,
+                n_frames=frames_per_iter,
+                scale=scale, # * sentiment_scale,
                 batch_size=batch_size,
                 x_dim=x_dim,
                 y_dim=y_dim,
             )
-            break
-        images = latent_walk(
-            netG=netG,
-            z1=zs[i],
-            z2=zs[i+1],
-            n_frames=interpolation,
-            scale=scale,
-            batch_size=batch_size,
-            x_dim=x_dim,
-            y_dim=y_dim,
-        )
 
-        for img in images:
-            # Pad with zeros to ensure picutres are in proper order
-            save_fn = f'{trials_dir}/./{suff}_{str(frames_created).zfill(7)}'
-            imwrite(save_fn+'.png', img)  # imageio function
-            frames_created += 1
+            if j+1 not in range(zs_length):
+                break
+
+            for img in images:
+                # Pad with zeros to ensure picutres are in proper order
+                save_fn = f'{trials_dir}/./{suff}_{str(frames_created).zfill(7)}'
+                imwrite(save_fn+'.png', img)  # imageio function
+                frames_created += 1
         print('walked {}/{}'.format(i+1, n_images))
+
 
     # If inputing audio, return the number of seconds video should last
     print('TOTALFRAMES: ', frames_created)
-    print('SECONDS ', seconds)
-    return frames_created, seconds
+    # print('SECONDS ', seconds)
+    return frames_created
