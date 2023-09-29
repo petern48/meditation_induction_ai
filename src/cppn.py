@@ -198,6 +198,8 @@ def latent_walk(
 
 
 def feature_extraction(audio_segment, z, sample_rate):
+    """Extracts mfcc features from each second of the audio segment.
+    Returns a list of these feature vectors"""
     start = 0
     end = sample_rate
     t = len(audio_segment)
@@ -234,7 +236,8 @@ def cppn(
     sample_rate,
     fps
 ):
-    seed = np.random.randint(16)
+    # seed = np.random.randint(16)
+    seed = 16  # make reproducable
     np.random.seed(seed)
     torch.manual_seed(seed)
 
@@ -251,7 +254,7 @@ def cppn(
     netG = init(Generator(
         net=net,
         batch_size=batch_size,
-        scale=scale,
+        scale=scale,  # TODO: Try scaling sentiment here too
         z=z,
         color_scheme=color_scheme,
         x_dim=x_dim,
@@ -264,21 +267,42 @@ def cppn(
     frames_created = 0
     n_images = len(audio_segments)
 
+    audio_sentence_vecs = []
+    # for each sentence extract mfcc's for each second
+    for i in range(n_images):
+        zs = feature_extraction(audio_segments[i], z, sample_rate)
+        audio_sentence_vecs.append(zs)
     # for each sentence
     for i in range(n_images):
-        sentiment_scale = sentiments[i] - 1  # Range [0,2] scale up if positive. Scale down if negative.
-        zs = feature_extraction(audio_segments[i], z, sample_rate)
+        zs = audio_sentence_vecs[i]
+
         zs_length = len(zs)
-        seconds = seconds_in_segments[i]  # how long this sentence lasts in the audio
-        num_frames = seconds * fps  # currently a float but will get rounded
-        frames_per_iter = round(num_frames / zs_length) #  - 2  # latent_walk adds 2 frames for beginning and end
+        sentiment_scale = sentiments[i] - 1  # Range [0,2] scale up if positive. Scale down if negative.
+        num_frames = fps * seconds_in_segments[i]  # currently a float
+        frames_per_iter = round(num_frames / zs_length)
+
         # print('Creating imgs for audio_segment', i)
         # print(seconds, 'seconds')
         # print(num_frames, 'num_frames')
+        last_vec = None
+        # TODO: Interpolate between last vec and this first vec
 
-        for j in range(zs_length):
+        # For each second
+        for j in range(-1, zs_length - 1):  # Spend the last two seconds interpolating
             z1 = zs[j]
-            if j+1 not in range(zs_length):
+            n_frames = frames_per_iter
+            vec_scale = scale * sentiment_scale
+            # Interpolate between the last_sentence vec and 1st vec of this sentence
+            if j == -1:
+                # Skip last_vec if this is the very first
+                if last_vec == None:
+                    continue
+                n_frames *= 2
+                vec_scale = scale  # don't scale by sentiment
+                z1 = last_vec
+                z2 = zs[0]
+
+            elif j+1 not in range(zs_length):
                 z2 = zs[0]
             else:
                 z2 = zs[j+1]
@@ -288,15 +312,16 @@ def cppn(
                 z1=z1,
                 z2=z2,
                 # n_frames=interpolation,
-                n_frames=frames_per_iter,
-                scale=scale * sentiment_scale,
+                n_frames=n_frames - 2, # latent_walk adds 2 frames for beginning and end
+                scale=vec_scale,
                 batch_size=batch_size,
                 x_dim=x_dim,
                 y_dim=y_dim,
             )
 
             if j+1 not in range(zs_length):
-                break
+                last_vec = images[j]
+                break  # Unecessary?
 
             for img in images:
                 # Pad with zeros to ensure picutres are in proper order
@@ -306,7 +331,4 @@ def cppn(
         print('walked {}/{}'.format(i+1, n_images))
 
 
-    # If inputing audio, return the number of seconds video should last
-    print('TOTALFRAMES: ', frames_created)
-    # print('SECONDS ', seconds)
     return frames_created
