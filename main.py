@@ -103,7 +103,11 @@ def main():
         if not os.path.isfile(args.music_file):
             raise Exception('Music file not found')
         audio_output_filename = f"data/{args.med_type}_meditation_audio_background_music.mp3"
-        overlay_music_and_speech(audio_filename, args.music_file, audio_output_filename)
+        overlay_music_and_speech(audio_filename, sr, args.music_file, audio_output_filename)
+        # # Add one more entry for the extra time that
+        # if new_seconds >= seconds:
+        #     seconds_in_segments.append(new_seconds)
+        print('seconds: ', seconds)
     else:
         audio_output_filename = audio_filename
 

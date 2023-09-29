@@ -25,7 +25,7 @@ def text_to_speech(meditation_script, accent, output_filename, sr):
     # pause = AudioSegment.silent(duration=2000)  # milliseconds
     # speech_audio = AudioSegment.empty()
     temp_file = 'segment.mp3'
-    pause_duration = 1.0  # seconds
+    pause_duration = 2.0  # seconds
     pause = np.zeros(int(pause_duration * sr), dtype=np.float32)
     combined_audio = np.empty(0)
     seconds_in_segments = []
@@ -40,8 +40,10 @@ def text_to_speech(meditation_script, accent, output_filename, sr):
         )
         tts.save(temp_file)
 
+        # overlay music here?
+
         # Convert to librosa arrays and save in list
-        segment, sr = librosa.load(temp_file, sr=sr)
+        segment, _ = librosa.load(temp_file, sr=sr)
         # Add longer pause after every sentence
         segment = np.concatenate((segment, pause))
         segment_seconds = len(segment) / sr
@@ -50,7 +52,7 @@ def text_to_speech(meditation_script, accent, output_filename, sr):
         combined_audio = np.concatenate((combined_audio, segment))
 
         # Concatenate audio for pydub
-        # segment_audio = AudioSegment.from_mp3(temp_file) #  + pause
+        # segment_audio = AudioSegment.from_mp3(temp_file) # + pause
         # speech_audio += segment_audio
 
         # Sentiment Analysis
@@ -68,7 +70,7 @@ def text_to_speech(meditation_script, accent, output_filename, sr):
     return audio_segments, seconds_in_segments, sentiments, sentences, seconds
 
 
-def overlay_music_and_speech(speech_file_path, music_file_path, filename):
+def overlay_music_and_speech(speech_file_path, sr, music_file_path, filename):
     """Add background music to speech given path to file and speech mp3 files"""
 
     music1 = AudioSegment.from_mp3(music_file_path)
@@ -84,7 +86,10 @@ def overlay_music_and_speech(speech_file_path, music_file_path, filename):
     combined = speech.overlay(longer_music)
     combined.export(filename, format="mp3")
 
-    return filename
+    x, _ = librosa.load(filename, sr=sr)
+    seconds = len(x) / sr
+
+    return seconds
 
 
 # For testing purposes
