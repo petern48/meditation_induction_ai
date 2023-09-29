@@ -145,9 +145,9 @@ def main():
             fps=fps
         )
         # fps = round(frames_created / seconds)
-        print('frames_created', frames_created)
-        print('seconds', seconds)
-        print('fps', fps)
+        print('TOTALFRAMES: ', frames_created)
+        print('SECONDS: ', seconds)
+        print('FPS: ', fps)
 
         # Compile imgs into video
         print('\nCompiling imgs into video')
