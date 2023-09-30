@@ -45,11 +45,11 @@ def apply_color_scheme(img, color_scheme):
         # Scale until all red is more then green
         green_mask = (green_channel >= red_channel)
         red_channel[green_mask] *= 1.25
-        green_channel[green_mask] *= 0.75
+        green_channel[green_mask] *= 0.5
 
         # Remove the green where red is stronger
         red_channel[red_mask] *= 1.3
-        green_channel[red_mask] *= 0.5
+        green_channel[red_mask] *= 0  # 0.g
 
         blue_channel *= 0
 
@@ -70,10 +70,18 @@ def apply_color_scheme(img, color_scheme):
 
     elif color_scheme == LOW_B_HIGH_A:
         # target bold yellow or electric blue
-        blue_mask = (blue_channel > red_channel) & (blue_channel > green_channel)
-        img[blue_mask, BLUE] *= 1.3
-        img[not blue_mask, RED] *= 1.3,
-        img[not blue_mask, GREEN] *= 1.3
+        blue_mask = (blue_channel > green_channel)
+        green_mask = ~blue_mask
+        # Electric Blue: Set blue and green equal
+        blue_channel[blue_mask] = green_channel[blue_mask]
+        red_channel[blue_mask] *= 0.1
+
+        # Turn green to yello
+        green_channel[green_mask] = red_channel[green_mask]
+        blue_channel[green_mask] *= 0.1
+
+        # Set blue and green equal to get yellow
+        # median_rgb = torch.median(img, axis=3).values.to(torch.float32).expand_as(blue_channel)
 
     # Already set c_dim to 1
     # elif color_scheme == LOW_B_LOW_A:  # instead just set c_dim to 1
