@@ -179,15 +179,26 @@ def feature_extraction(audio_segment, z, sample_rate):
         Returns a list of these feature vectors"""
     start = 0
     end = sample_rate
-    t = len(audio_segment)
+    total_length = len(audio_segment)
     features = np.empty(0, dtype=np.float32)
-    while end <= t:
+    # Move forward one second at a time
+    while end <= total_length:
         segment = audio_segment[start: end]
         mfcc = np.mean(librosa.feature.mfcc(y=segment, sr=sample_rate, n_mfcc=z).T, axis=0)
         mfcc = np.reshape(mfcc, (1, z))
         features = np.append(features, mfcc)
         start = end
-        end += sample_rate  # move forward by one second
+        end += sample_rate
+        # if end > total_length:
+        #     print('entering')
+        #     end = total_length - 1
+        #     segment = audio_segment[start: end]
+        #     mfcc = np.mean(librosa.feature.mfcc(y=segment, sr=sample_rate, n_mfcc=z).T, axis=0)
+        #     mfcc = np.reshape(mfcc, (1, z))
+        #     features = np.append(features, mfcc)
+        #     break
+        # finish the last bit in the next (final iteration)
+
 
     # Normalize vector by dividing them all by their max value
     max_val = np.amax(np.abs(features))
@@ -195,8 +206,9 @@ def feature_extraction(audio_segment, z, sample_rate):
     features = torch.from_numpy(features)
 
     for i in range(1, len(features)):
-        magn = torch.norm(features[i] - features[i-1])
-        print(f'magn difference in features: {magn}')
+        if i == len(features) - 1:
+            magn = torch.norm(features[i] - features[i-1])
+            print(f'magn difference between features_extractions: {magn}')
 
     features = np.reshape(features, (-1, z))
     return features
@@ -220,6 +232,7 @@ def cppn(
     pause_seconds
 ):
     seed = np.random.randint(16)
+    print('SEED: ', seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
 
@@ -259,6 +272,7 @@ def cppn(
         zs = feature_extraction(audio_segments[i], z, sample_rate)
         zs_length = len(zs)
         seconds = seconds_in_segments[i]  # how long this sentence lasts in the audio
+        print('the above should have ', seconds_in_segments[i], ' seconds')
         frames_per_sentence_left = round(seconds * fps)
 
         # for last iteration, use the exact number of frames left

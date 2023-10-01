@@ -41,11 +41,12 @@ def text_to_speech(meditation_script, accent, output_filename, sr, pause_seconds
 
         # overlay music here?
 
+
         # Convert to librosa arrays and save in list
         segment, _ = librosa.load(temp_file, sr=sr)
         # Add longer pause after every sentence
         segment = np.concatenate((segment, pause))
-        segment_seconds = len(segment) / sr
+        segment_seconds = len(segment) / sr  # float
         audio_segments.append(segment)
         seconds_in_segments.append(segment_seconds)
         combined_audio = np.concatenate((combined_audio, segment))
