@@ -9,7 +9,7 @@ import soundfile as sf
 import numpy as np
 
 
-def text_to_speech(meditation_script, accent, output_filename, sr):
+def text_to_speech(meditation_script, accent, output_filename, sr, pause_seconds):
     """Generates audio file given using gTTS library"""
 
     # List of accents available in gTTS
@@ -25,8 +25,7 @@ def text_to_speech(meditation_script, accent, output_filename, sr):
     # pause = AudioSegment.silent(duration=2000)  # milliseconds
     # speech_audio = AudioSegment.empty()
     temp_file = 'segment.mp3'
-    pause_duration = 2.0  # seconds
-    pause = np.zeros(int(pause_duration * sr), dtype=np.float32)
+    pause = np.zeros(int(pause_seconds * sr), dtype=np.float32)
     combined_audio = np.empty(0)
     seconds_in_segments = []
 
@@ -67,7 +66,7 @@ def text_to_speech(meditation_script, accent, output_filename, sr):
     sf.write(output_filename, combined_audio, sr)
     seconds = len(combined_audio) / sr
 
-    return audio_segments, seconds_in_segments, sentiments, sentences, seconds
+    return audio_segments, seconds_in_segments, sentiments, seconds
 
 
 def overlay_music_and_speech(speech_file_path, music_file_path, filename):

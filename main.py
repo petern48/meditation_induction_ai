@@ -88,13 +88,15 @@ def main():
     ##################
     audio_filename = f"data/{args.med_type}_meditation_audio_{args.accent}.mp3"
 
-    sr = 22050  # default librosa value
+    sr = 22050  # default librosa sample rate
+    pause_seconds = 2.0
 
-    audio_segments, seconds_in_segments, sentiments, sentences, seconds = text_to_speech(
+    audio_segments, seconds_in_segments, sentiments, seconds = text_to_speech(
         script,
         args.accent,
         audio_filename,
-        sr
+        sr,
+        pause_seconds
     )
 
 
@@ -130,7 +132,7 @@ def main():
         y_dim = args.y_dim
         color_scheme = args.color_scheme
 
-        fps = 25
+        fps = 15
 
         print('Creating imgs using cppn')
         frames_created = cppn.cppn(  # removed seconds
@@ -147,7 +149,8 @@ def main():
             seconds_in_segments=seconds_in_segments,
             sample_rate=sr,
             fps=fps,
-            total_seconds=seconds
+            total_seconds=seconds,
+            pause_seconds=pause_seconds
         )
         # fps = round(frames_created / seconds)
         print('TOTALFRAMES: ', frames_created)
@@ -168,7 +171,7 @@ def main():
 
         os.system(f'rm {temp_file}')
 
-    print(f'Completed. Video save at {output_filename}')
+    print(f'Completed. Video saved at {output_filename}')
 
 
 if __name__ == '__main__':

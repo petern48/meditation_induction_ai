@@ -75,7 +75,7 @@ class Generator(nn.Module):
         img = x.reshape(self.batch_size, self.y_dim, self.x_dim, self.c_dim)
 
         # Scaled by 255
-        img *= 255
+        # img *= 255  # TODO: TRY removing this bc it's done in latent_walk
         if self.color_scheme == 'warm':
             # Reduce the green and blue values
             img[:, :, :, RED] *= 1.3
@@ -88,7 +88,8 @@ class Generator(nn.Module):
         else:
             raise Exception("Invalid Color Scheme. Exiting...")
 
-        img[img > 255] = 255  # Ensure values are under 255
+        # img[img > 255] = 255  # Ensure values are under 255
+        img[img > 1] = 1
         return img
 
 
@@ -193,6 +194,10 @@ def feature_extraction(audio_segment, z, sample_rate):
     features /= max_val
     features = torch.from_numpy(features)
 
+    for i in range(1, len(features)):
+        magn = torch.norm(features[i] - features[i-1])
+        print(f'magn difference in features: {magn}')
+
     features = np.reshape(features, (-1, z))
     return features
 
@@ -211,7 +216,8 @@ def cppn(
     seconds_in_segments,
     sample_rate,
     fps,
-    total_seconds
+    total_seconds,
+    pause_seconds
 ):
     seed = np.random.randint(16)
     np.random.seed(seed)
@@ -243,10 +249,13 @@ def cppn(
     n_images = len(audio_segments)
 
     total_frames_left = round(total_seconds * fps)
+    # print('total_frames_left', total_frames_left)
 
+    last_vec = np.empty([0])  # Work around to replace setting to None
     # for each sentence
     for i in range(n_images):
-        sentiment_scale = sentiments[i] - 1  # Range [0,2] scale up if positive. Scale down if negative.
+        # sentiment_scale: range [0,2] scale up if positive. Scale down if negative.
+        sentiment_scale = sentiments[i] - 1
         zs = feature_extraction(audio_segments[i], z, sample_rate)
         zs_length = len(zs)
         seconds = seconds_in_segments[i]  # how long this sentence lasts in the audio
@@ -254,24 +263,40 @@ def cppn(
 
         # for last iteration, use the exact number of frames left
         sentence_iterations_left = n_images - i
-        if sentence_iterations_left == 1:  # last iteration
+        if sentence_iterations_left == 1:
             frames_per_sentence_left = total_frames_left
 
         total_frames_left -= frames_per_sentence_left
 
-        # for each second (roughly)
-        for j in range(zs_length):
+        # For very first iteration, there's no last_vec to interpolate to
+        end_range = zs_length - int(pause_seconds)
+        if last_vec.any():
+            range_list = range(-1, end_range)
+        else:
+            range_list = range(0, end_range)
+        # for each (roughly) second
+        for j in range_list:
             # Distribute frames per j iteration evenly as possible
-            iterations_left = zs_length - j
+            vec_scale = scale * sentiment_scale
+            iterations_left = end_range - j
             frames_per_iter = round(frames_per_sentence_left / iterations_left)
 
             frames_per_sentence_left -= frames_per_iter
 
-            z1 = zs[j]
-            if j+1 not in range(zs_length):
+            # Interpolate between last_vec and 1st vec of this sentence
+            if j == -1:
+                z1 = last_vec
                 z2 = zs[0]
+                # vec_scale = scale  # don't sentiment scale when internpolating these
+            # if last j in iteration
+            # elif j+1 not in range_list:  # TODO: DELETE this??
+            #     z1 = zs[j]
+            #     z2 = zs[0]
             else:
+                z1 = zs[j]
                 z2 = zs[j+1]
+                magnitude_diff = torch.norm(z2 - z1)
+                print('magn difference', magnitude_diff)
 
             images = latent_walk(
                 netG=netG,
@@ -279,13 +304,15 @@ def cppn(
                 z2=z2,
                 # n_frames=interpolation,
                 n_frames=frames_per_iter - 2,  # latent_walk adds two frames
-                scale=scale * sentiment_scale,
+                scale=vec_scale,
                 batch_size=batch_size,
                 x_dim=x_dim,
                 y_dim=y_dim,
             )
 
-
+            if j+1 not in range_list:
+                last_vec = z2
+                # print('setting last_vec', last_vec)
             for img in images:
                 # Pad with zeros to ensure pictures are in proper order
                 save_fn = f'{trials_dir}/./{suff}_{str(frames_created).zfill(7)}'
