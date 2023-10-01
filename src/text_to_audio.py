@@ -9,7 +9,7 @@ import soundfile as sf
 import numpy as np
 
 
-def text_to_speech(meditation_script, accent, output_filename, sr, pause_seconds):
+def text_to_speech(meditation_script, accent, output_filename, sr, pause_seconds, music_file_path):
     """Generates audio file given using gTTS library"""
 
     # List of accents available in gTTS
@@ -29,6 +29,8 @@ def text_to_speech(meditation_script, accent, output_filename, sr, pause_seconds
     combined_audio = np.empty(0)
     seconds_in_segments = []
 
+    music1 = AudioSegment.from_mp3(music_file_path)
+    start_music = 0
     for sentence in sentences:
         # Text to speech
         tts = gTTS(
@@ -39,14 +41,21 @@ def text_to_speech(meditation_script, accent, output_filename, sr, pause_seconds
         )
         tts.save(temp_file)
 
+
         # overlay music here?
+        temp_audio = AudioSegment.from_mp3(temp_file)
+        # Add longer pause after every sentence
+        temp_audio += AudioSegment.silent(duration= pause_seconds * 1000)
+        end_music = overlay_music_and_speech(temp_audio, music1, start_music, temp_file)
+        start_music = end_music
 
 
         # Convert to librosa arrays and save in list
         segment, _ = librosa.load(temp_file, sr=sr)
-        # Add longer pause after every sentence
-        segment = np.concatenate((segment, pause))
+        # # Add longer pause after every sentence
+        # segment = np.concatenate((segment, pause))
         segment_seconds = len(segment) / sr  # float
+        print('segment_seconds ', segment_seconds)
         audio_segments.append(segment)
         seconds_in_segments.append(segment_seconds)
         combined_audio = np.concatenate((combined_audio, segment))
@@ -70,30 +79,45 @@ def text_to_speech(meditation_script, accent, output_filename, sr, pause_seconds
     return audio_segments, seconds_in_segments, sentiments, seconds
 
 
-def overlay_music_and_speech(speech_file_path, music_file_path, filename):
+def overlay_music_and_speech(speech_audio, music_audio, start_idx, filename):
     """Add background music to speech given path to file and speech mp3 files"""
 
-    music1 = AudioSegment.from_mp3(music_file_path)
-    speech = AudioSegment.from_mp3(speech_file_path)
-    times_to_repeat = math.floor(len(speech) / len(music1))
+    # music1 = AudioSegment.from_mp3(music_file_path)
+    # speech = AudioSegment.from_mp3(speech_file_path)
+    length_music = len(music_audio)
+    speech_duration = len(speech_audio)
+    # If not longer
+    end_idx = start_idx + speech_duration
+    if end_idx <= length_music - 1:
+        specific_audio = music_audio[start_idx:end_idx]
+
+    # Make music wrap around
+    else:
+        second_end = speech_duration - (length_music-1 - start_idx)
+        specific_audio = music_audio[start_idx:length_music - 1] + \
+        music_audio[0:second_end]
+        end_idx = second_end  # for return value
+
+    # times_to_repeat = math.floor(len(speech) / len(music1))
 
     # Lengthen music so it matches length of speech file
-    longer_music = AudioSegment.empty()
-    for _ in range(times_to_repeat):
-        longer_music += music1
+    # longer_music = AudioSegment.empty()
+    # for _ in range(times_to_repeat):
+    #     longer_music += music1
 
-    # Add the remaining bit to make them exactly the same length
-    remaining_time = len(speech) - len(longer_music)
-    longer_music += music1[:remaining_time]
+    # # Add the remaining bit to make them exactly the same length
+    # remaining_time = len(speech) - len(longer_music)
+    # longer_music += music1[:remaining_time]
 
+    assert(len(speech_audio) == len(specific_audio))
 
     print(f"Saving {filename} audio file")
-    combined = speech.overlay(longer_music)
+    combined = speech_audio.overlay(specific_audio)
     combined.export(filename, format="mp3")
 
     seconds = combined.duration_seconds
 
-    return seconds
+    return end_idx
 
 
 # For testing purposes

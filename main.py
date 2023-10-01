@@ -96,20 +96,22 @@ def main():
         args.accent,
         audio_filename,
         sr,
-        pause_seconds
+        pause_seconds,
+        args.music_file
     )
 
 
     # Adding background music    
     if not args.skip_background_music:
-        if not os.path.isfile(args.music_file):
-            raise Exception('Music file not found')
-        audio_output_filename = f"data/{args.med_type}_meditation_audio_background_music.mp3"
-        seconds = overlay_music_and_speech(
-            audio_filename,
-            args.music_file,
-            audio_output_filename
-        )
+        # if not os.path.isfile(args.music_file):
+        #     raise Exception('Music file not found')
+        # audio_output_filename = f"data/{args.med_type}_meditation_audio_background_music.mp3"
+        # seconds = overlay_music_and_speech(
+        #     audio_filename,
+        #     args.music_file,
+        #     audio_output_filename
+        # )
+        audio_output_filename = audio_filename
     else:
         audio_output_filename = audio_filename
 
