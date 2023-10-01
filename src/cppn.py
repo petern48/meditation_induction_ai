@@ -198,6 +198,8 @@ def latent_walk(
 
 
 def feature_extraction(audio_segment, z, sample_rate):
+    """Extracts mfcc features from each second of the audio segment.
+        Returns a list of these feature vectors"""
     start = 0
     end = sample_rate
     t = len(audio_segment)
@@ -222,7 +224,7 @@ def feature_extraction(audio_segment, z, sample_rate):
 def cppn(
     interpolation,
     c_dim,
-    audio_file,
+    # audio_file,
     scale,
     trials_dir,
     x_dim,
@@ -232,7 +234,8 @@ def cppn(
     sentiments,
     seconds_in_segments,
     sample_rate,
-    fps
+    fps,
+    total_seconds
 ):
     seed = np.random.randint(16)
     np.random.seed(seed)
@@ -259,10 +262,11 @@ def cppn(
         c_dim=c_dim,
     ))
 
-    print('args.audio_file: ', audio_file)
 
     frames_created = 0
     n_images = len(audio_segments)
+
+    total_frames_left = round(total_seconds * fps)
 
     # for each sentence
     for i in range(n_images):
@@ -270,13 +274,23 @@ def cppn(
         zs = feature_extraction(audio_segments[i], z, sample_rate)
         zs_length = len(zs)
         seconds = seconds_in_segments[i]  # how long this sentence lasts in the audio
-        num_frames = seconds * fps  # currently a float but will get rounded
-        frames_per_iter = round(num_frames / zs_length) #  - 2  # latent_walk adds 2 frames for beginning and end
-        # print('Creating imgs for audio_segment', i)
-        # print(seconds, 'seconds')
-        # print(num_frames, 'num_frames')
+        frames_per_sentence_left = round(seconds * fps)
 
+        # for last iteration, use the exact number of frames left
+        sentence_iterations_left = n_images - i
+        if sentence_iterations_left == 1:  # last iteration
+            frames_per_sentence_left = total_frames_left
+
+        total_frames_left -= frames_per_sentence_left
+
+        # for each second (roughly)
         for j in range(zs_length):
+            # Distribute frames per j iteration evenly as possible
+            iterations_left = zs_length - j
+            frames_per_iter = round(frames_per_sentence_left / iterations_left)
+
+            frames_per_sentence_left -= frames_per_iter
+
             z1 = zs[j]
             if j+1 not in range(zs_length):
                 z2 = zs[0]
@@ -288,25 +302,20 @@ def cppn(
                 z1=z1,
                 z2=z2,
                 # n_frames=interpolation,
-                n_frames=frames_per_iter,
+                n_frames=frames_per_iter - 2,  # latent_walk adds two frames
                 scale=scale * sentiment_scale,
                 batch_size=batch_size,
                 x_dim=x_dim,
                 y_dim=y_dim,
             )
 
-            if j+1 not in range(zs_length):
-                break
 
             for img in images:
-                # Pad with zeros to ensure picutres are in proper order
+                # Pad with zeros to ensure pictures are in proper order
                 save_fn = f'{trials_dir}/./{suff}_{str(frames_created).zfill(7)}'
                 imwrite(save_fn+'.png', img)  # imageio function
                 frames_created += 1
         print('walked {}/{}'.format(i+1, n_images))
 
 
-    # If inputing audio, return the number of seconds video should last
-    print('TOTALFRAMES: ', frames_created)
-    # print('SECONDS ', seconds)
     return frames_created

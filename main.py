@@ -103,11 +103,11 @@ def main():
         if not os.path.isfile(args.music_file):
             raise Exception('Music file not found')
         audio_output_filename = f"data/{args.med_type}_meditation_audio_background_music.mp3"
-        overlay_music_and_speech(audio_filename, sr, args.music_file, audio_output_filename)
-        # # Add one more entry for the extra time that
-        # if new_seconds >= seconds:
-        #     seconds_in_segments.append(new_seconds)
-        print('seconds: ', seconds)
+        seconds = overlay_music_and_speech(
+            audio_filename,
+            args.music_file,
+            audio_output_filename
+        )
     else:
         audio_output_filename = audio_filename
 
@@ -136,7 +136,7 @@ def main():
         frames_created = cppn.cppn(  # removed seconds
             interpolation=inter,
             c_dim=args.channels,
-            audio_file=audio_output_filename,
+            # audio_file=audio_output_filename,
             scale=scale,
             trials_dir=trials_dir,
             x_dim=x_dim,
@@ -146,11 +146,13 @@ def main():
             sentiments=sentiments,
             seconds_in_segments=seconds_in_segments,
             sample_rate=sr,
-            fps=fps
+            fps=fps,
+            total_seconds=seconds
         )
         # fps = round(frames_created / seconds)
         print('TOTALFRAMES: ', frames_created)
         print('SECONDS: ', seconds)
+        # print('SECONDS OF VIDEO: ', frames_created / fps)
         print('FPS: ', fps)
 
         # Compile imgs into video
