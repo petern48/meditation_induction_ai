@@ -70,24 +70,28 @@ def text_to_speech(meditation_script, accent, output_filename, sr):
     return audio_segments, seconds_in_segments, sentiments, sentences, seconds
 
 
-def overlay_music_and_speech(speech_file_path, sr, music_file_path, filename):
+def overlay_music_and_speech(speech_file_path, music_file_path, filename):
     """Add background music to speech given path to file and speech mp3 files"""
 
     music1 = AudioSegment.from_mp3(music_file_path)
     speech = AudioSegment.from_mp3(speech_file_path)
-    times_to_repeat = len(speech) / len(music1)
+    times_to_repeat = math.floor(len(speech) / len(music1))
 
-    # Lengthen music so it is at least the length of speech audio
+    # Lengthen music so it matches length of speech file
     longer_music = AudioSegment.empty()
-    for _ in range(math.ceil(times_to_repeat)):
+    for _ in range(times_to_repeat):
         longer_music += music1
+
+    # Add the remaining bit to make them exactly the same length
+    remaining_time = len(speech) - len(longer_music)
+    longer_music += music1[:remaining_time]
+
 
     print(f"Saving {filename} audio file")
     combined = speech.overlay(longer_music)
     combined.export(filename, format="mp3")
 
-    x, _ = librosa.load(filename, sr=sr)
-    seconds = len(x) / sr
+    seconds = combined.duration_seconds
 
     return seconds
 
