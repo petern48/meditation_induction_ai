@@ -134,7 +134,7 @@ def main():
         y_dim = args.y_dim
         color_scheme = args.color_scheme
 
-        fps = 15
+        fps = 25
 
         print('Creating imgs using cppn')
         frames_created = cppn.cppn(  # removed seconds
@@ -152,7 +152,7 @@ def main():
             sample_rate=sr,
             fps=fps,
             total_seconds=seconds,
-            pause_seconds=pause_seconds
+            pause_seconds=int(pause_seconds)
         )
         # fps = round(frames_created / seconds)
         print('TOTALFRAMES: ', frames_created)
