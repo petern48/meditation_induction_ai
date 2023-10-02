@@ -55,7 +55,6 @@ def text_to_speech(meditation_script, accent, output_filename, sr, pause_seconds
         # # Add longer pause after every sentence
         # segment = np.concatenate((segment, pause))
         segment_seconds = len(segment) / sr  # float
-        print('segment_seconds ', segment_seconds)
         audio_segments.append(segment)
         seconds_in_segments.append(segment_seconds)
         combined_audio = np.concatenate((combined_audio, segment))
@@ -72,7 +71,7 @@ def text_to_speech(meditation_script, accent, output_filename, sr, pause_seconds
 
     # Save the audio file
     # speech_audio.export(output_filename, format='mp3')  # save as pydub
-    print(f"Saving {output_filename} audio file")
+    # print(f"Saving {output_filename} audio file")
     sf.write(output_filename, combined_audio, sr)
     seconds = len(combined_audio) / sr
 
@@ -111,7 +110,7 @@ def overlay_music_and_speech(speech_audio, music_audio, start_idx, filename):
 
     assert(len(speech_audio) == len(specific_audio))
 
-    print(f"Saving {filename} audio file")
+    # print(f"Saving {filename} audio file")
     combined = speech_audio.overlay(specific_audio)
     combined.export(filename, format="mp3")
 
