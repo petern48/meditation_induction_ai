@@ -24,7 +24,8 @@ class Model:
             MODEL_NAME,
             device_map="auto",
             load_in_8bit=True,
-            trust_remote_code=True)
+            trust_remote_code=True
+        )
 
         self.pipeline = pipeline(
             "text-generation",

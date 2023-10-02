@@ -6,12 +6,18 @@ from src import cppn
 from src.text_generation import text_generation, get_prompt
 from src.text_to_audio import text_to_speech, overlay_music_and_speech
 
+meditation_types = ['mindful observation', 'body-centered meditation',
+                    'visual concentration', 'contemplation',
+                    'affect-centered meditation', 'mantra meditation',
+                    'movement meditation'
+]
+
 
 def load_args():
     parser = argparse.ArgumentParser(description='meditation_induction')
     # Non-default arguments
     parser.add_argument('--med_type', type=str,
-                        choices=['focused', 'body-scan', 'visualization', 'reflection', 'movement'],
+                        choices=meditation_types,
                         help="type of meditation: '[focused] [body-scan] [visualization] [reflection] [movement]")
     # Default arguments
     parser.add_argument('--script_file', type=str, default='',
@@ -78,7 +84,10 @@ def main():
         #     'movement': 'write me a movement meditation script designed to improve mind body connection, energy, vitality, and the systems of the body'
         # }
         # prompt = prompts[args.med_type]
-        prompt = get_prompt(args.med_type, )
+
+        context = input('Provide some context (optional): How are you feeling today?\n')
+
+        prompt = get_prompt(args.med_type, context)
 
 
         ###################
