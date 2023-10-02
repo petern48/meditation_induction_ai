@@ -273,7 +273,7 @@ def cppn(
         if last_vec.any():
             range_list = range(-1, end_range)
         else:
-            range_list = range(0, end_range)
+            range_list = range(0, end_range)  # TODO: ADD -1 to try. Along with inc frames per iter
 
         # for each (roughly) second
         for j in range_list:
@@ -285,8 +285,8 @@ def cppn(
             # Interpolate between last_vec and 1st vec of this sentence during the pause
             if j == -1:
                 z1 = last_vec
-                z2 = zs[0]
-                # frames_per_iter *= pause_seconds  # double frames  # TODO
+                z2 = zs[0] * sentiment_scale
+                # frames_per_iter *= pause_seconds  # double frames  # TODO: added to try
                 # j += 1
 
             else:
