@@ -75,7 +75,7 @@ class Generator(nn.Module):
         img = x.reshape(self.batch_size, self.y_dim, self.x_dim, self.c_dim)
 
         # Scaled by 255
-        img *= 255
+        # img *= 255  # TODO: TRY removing this bc it's done in latent_walk
         if self.color_scheme == 'warm':
             # Reduce the green and blue values
             img[:, :, :, RED] *= 1.3
@@ -88,7 +88,8 @@ class Generator(nn.Module):
         else:
             raise Exception("Invalid Color Scheme. Exiting...")
 
-        img[img > 255] = 255  # Ensure values are under 255
+        # img[img > 255] = 255  # Ensure values are under 255
+        img[img > 1] = 1
         return img
 
 
@@ -173,39 +174,53 @@ def latent_walk(
     return states  # Returns multiple imageio imgs
 
 
-def feature_extraction(file_path, num_mfcc, z):
-    x, sample_rate = librosa.load(file_path, res_type='kaiser_fast')
+def feature_extraction(audio_segment, z, sample_rate):
+    """Extracts mfcc features from each second of the audio segment.
+        Returns a list of these feature vectors"""
     start = 0
     end = sample_rate
-    t = len(x)
-    seconds = round(len(x) / sample_rate)  # Seconds in the video
+    total_length = len(audio_segment)
     features = np.empty(0, dtype=np.float32)
-    while end <= t:
-        segment = x[start: end]
-        mfcc = np.mean(librosa.feature.mfcc(y=segment, sr=sample_rate, n_mfcc=num_mfcc).T, axis=0)
+    # Move forward one second at a time
+    while end <= total_length:
+        segment = audio_segment[start: end]
+        mfcc = np.mean(librosa.feature.mfcc(y=segment, sr=sample_rate, n_mfcc=z).T, axis=0)
         mfcc = np.reshape(mfcc, (1, z))
         features = np.append(features, mfcc)
         start = end
         end += sample_rate
-    features = np.reshape(features, (-1, z))
 
+
+    # Normalize vector by dividing them all by their max value
     max_val = np.amax(np.abs(features))
     features /= max_val
     features = torch.from_numpy(features)
-    return features, seconds
+
+
+    features = np.reshape(features, (-1, z))
+    return features
 
 
 def cppn(
     interpolation,
     c_dim,
-    audio_file,
+    # audio_file,
     scale,
     trials_dir,
     x_dim,
     y_dim,
-    color_scheme
+    color_scheme,
+    audio_segments,
+    sentiments,
+    seconds_in_segments,
+    sample_rate,
+    fps,
+    total_seconds,
+    pause_seconds
 ):
     seed = np.random.randint(16)
+    # not seed 9, 12, 1, 15, 10, 8, 5, 6
+    print('SEED: ', seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
 
@@ -229,45 +244,78 @@ def cppn(
         y_dim=y_dim,
         c_dim=c_dim,
     ))
-    zs = []
 
-    print('args.audio_file', audio_file)
-    zs, seconds = feature_extraction(audio_file, z, z)
 
-    n_images = len(zs)
     frames_created = 0
+    n_images = len(audio_segments)
+
+    total_frames_left = round(total_seconds * fps)
+
+    last_vec = np.empty([0])  # Work around to replace setting to None
+    # for each sentence
     for i in range(n_images):
-        if i+1 not in range(n_images):
+        # sentiment_scale: range [0,2] scale up if positive. Scale down if negative.
+        sentiment_scale = sentiments[i] - 1
+        zs = feature_extraction(audio_segments[i], z, sample_rate)
+        zs_length = len(zs)
+        seconds = seconds_in_segments[i]  # how long this sentence lasts in the audio
+        frames_per_sentence_left = round(seconds * fps)
+
+        # for last iteration, use the exact number of frames left
+        sentence_iterations_left = n_images - i
+        if sentence_iterations_left == 1:
+            frames_per_sentence_left = total_frames_left
+
+        total_frames_left -= frames_per_sentence_left
+
+        # For very first iteration, there's no last_vec to interpolate to
+        end_range = zs_length - 1  # tried pause_seconds
+        if last_vec.any():
+            range_list = range(-1, end_range)
+        else:
+            range_list = range(0, end_range)
+
+        # for each (roughly) second
+        for j in range_list:
+            # Distribute frames per j iteration evenly as possible
+            iterations_left = end_range - j
+            frames_per_iter = round(frames_per_sentence_left / iterations_left)
+
+
+            # Interpolate between last_vec and 1st vec of this sentence during the pause
+            if j == -1:
+                z1 = last_vec
+                z2 = zs[0]
+                # frames_per_iter *= pause_seconds  # double frames  # TODO
+                # j += 1
+
+            else:
+                z1 = zs[j] * sentiment_scale
+                z2 = zs[j+1] * sentiment_scale
+
+            frames_per_sentence_left -= frames_per_iter  # moved this down from below
+
             images = latent_walk(
                 netG=netG,
-                z1=zs[i],
-                z2=zs[0],
-                n_frames=interpolation,
+                z1=z1,
+                z2=z2,
+                # n_frames=interpolation,
+                n_frames=frames_per_iter - 2,  # latent_walk adds two frames
                 scale=scale,
                 batch_size=batch_size,
                 x_dim=x_dim,
                 y_dim=y_dim,
             )
-            break
-        images = latent_walk(
-            netG=netG,
-            z1=zs[i],
-            z2=zs[i+1],
-            n_frames=interpolation,
-            scale=scale,
-            batch_size=batch_size,
-            x_dim=x_dim,
-            y_dim=y_dim,
-        )
 
-        for img in images:
-            # Pad with zeros to ensure picutres are in proper order
-            save_fn = f'{trials_dir}/./{suff}_{str(frames_created).zfill(7)}'
-            imwrite(save_fn+'.png', img)  # imageio function
-            frames_created += 1
+            if j+1 not in range_list:
+                last_vec = z2
+
+            for img in images:
+                # Pad with zeros to ensure pictures are in proper order
+                save_fn = f'{trials_dir}/./{suff}_{str(frames_created).zfill(7)}'
+                imwrite(save_fn+'.png', img)  # imageio function
+                frames_created += 1
         print('walked {}/{}'.format(i+1, n_images))
 
-    # If inputing audio, return the number of seconds video should last
-    print('TOTALFRAMES: ', frames_created)
-    print('SECONDS ', seconds)
-    return frames_created, seconds
+
+    return frames_created
