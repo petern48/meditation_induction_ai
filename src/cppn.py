@@ -59,7 +59,7 @@ class Generator(nn.Module):
         ones = torch.ones(n_points, 1, dtype=torch.float)
 
         z_scaled = z.view(self.batch_size, 1, self.z) * ones * self.scale
-        z_pt = self.linear_z(z_scaled.view(self.batch_size*n_points, self.z))  # torch.tensor.view change shape
+        z_pt = self.linear_z(z_scaled.view(self.batch_size*n_points, self.z))
         x_pt = self.linear_x(x.view(self.batch_size*n_points, -1))
         y_pt = self.linear_y(y.view(self.batch_size*n_points, -1))
         r_pt = self.linear_r(r.view(self.batch_size*n_points, -1))
@@ -67,15 +67,14 @@ class Generator(nn.Module):
         U = z_pt + x_pt + y_pt + r_pt
         H = torch.tanh(U)
         x = self.linear_h(H)
-        H = F.elu(x)  # Exponential Linear Unit
+        H = F.elu(x)
         H = F.softplus(self.linear_h(H))
         H = torch.tanh(self.linear_h(H))
         x = .5 * torch.sin(self.linear_out(H)) + .5
 
         img = x.reshape(self.batch_size, self.y_dim, self.x_dim, self.c_dim)
 
-        # Scaled by 255
-        # img *= 255  # TODO: TRY removing this bc it's done in latent_walk
+
         if self.color_scheme == 'warm':
             # Reduce the green and blue values
             img[:, :, :, RED] *= 1.3
@@ -88,7 +87,6 @@ class Generator(nn.Module):
         else:
             raise Exception("Invalid Color Scheme. Exiting...")
 
-        # img[img > 255] = 255  # Ensure values are under 255
         img[img > 1] = 1
         return img
 
@@ -101,18 +99,18 @@ def coordinates(
 ):
     """ These represent the x-coords, y-coords, and radial distances of points in 2D space """
     n_points = x_dim * y_dim  # total number of points in 2D space
-    x_range = scale*(np.arange(x_dim)-(x_dim-1)/2.0)/(x_dim-1)/0.5  # (256,)  for 256x256
+    x_range = scale*(np.arange(x_dim)-(x_dim-1)/2.0)/(x_dim-1)/0.5
     # ^ Evenly spaced values
-    y_range = scale*(np.arange(y_dim)-(y_dim-1)/2.0)/(y_dim-1)/0.5  # (256,)
-    x_mat = np.matmul(np.ones((y_dim, 1)), x_range.reshape((1, x_dim)))  # (256, 256)   -10s along the 1st and last col
-    y_mat = np.matmul(y_range.reshape((y_dim, 1)), np.ones((1, x_dim)))  # (256, 256)   -10s along the 1st and last row
+    y_range = scale*(np.arange(y_dim)-(y_dim-1)/2.0)/(y_dim-1)/0.5
+    x_mat = np.matmul(np.ones((y_dim, 1)), x_range.reshape((1, x_dim)))
+    y_mat = np.matmul(y_range.reshape((y_dim, 1)), np.ones((1, x_dim)))
     r_mat = np.sqrt(x_mat*x_mat + y_mat*y_mat)
     x_mat = np.tile(x_mat.flatten(), batch_size).reshape(batch_size, n_points, 1)
     y_mat = np.tile(y_mat.flatten(), batch_size).reshape(batch_size, n_points, 1)
     r_mat = np.tile(r_mat.flatten(), batch_size).reshape(batch_size, n_points, 1)
-    x_mat = torch.from_numpy(x_mat).float()  # ([1, 65536, 1])  Evenly distributed nums -10 to 10
-    y_mat = torch.from_numpy(y_mat).float()  # ([1, 65536, 1])  Values -10 to 10  (dif order then x_mat)
-    r_mat = torch.from_numpy(r_mat).float()  # ([1, 65536, 1])  Evenly distributed nums 14.1 to ? to 14.1
+    x_mat = torch.from_numpy(x_mat).float()
+    y_mat = torch.from_numpy(y_mat).float()
+    r_mat = torch.from_numpy(r_mat).float()
     return x_mat, y_mat, r_mat
 
 
@@ -143,7 +141,7 @@ def init(model):
 
 
 # z1 is a tensor as a starting point, z2 is the ending point
-# n_frames = # of intermediate steps -> program inputs args.interpolation
+# n_frames = # of intermediate steps
 def latent_walk(
     netG,
     z1,
@@ -159,7 +157,7 @@ def latent_walk(
 
     states = []
     for i in range(total_frames):
-        z = z1 + delta * float(i)  # shape [1,8]
+        z = z1 + delta * float(i)
         states.append(
             sample(
                 netG=netG,
@@ -168,7 +166,7 @@ def latent_walk(
                 z=z,
                 x_dim=x_dim,
                 y_dim=y_dim,
-            )[0]*255
+            )[0] * 255  # scale up to rgb values
         )
     states = torch.stack(states).detach().numpy()  # concatenates elements in list to a torch tensor
     return states  # Returns multiple imageio imgs
@@ -190,7 +188,6 @@ def feature_extraction(audio_segment, z, sample_rate):
         start = end
         end += sample_rate
 
-
     # Normalize vector by dividing them all by their max value
     max_val = np.amax(np.abs(features))
     features /= max_val
@@ -202,9 +199,7 @@ def feature_extraction(audio_segment, z, sample_rate):
 
 
 def cppn(
-    interpolation,
     c_dim,
-    # audio_file,
     scale,
     trials_dir,
     x_dim,
@@ -219,7 +214,6 @@ def cppn(
     pause_seconds
 ):
     seed = np.random.randint(16)
-    # not seed 9, 12, 1, 15, 10, 8, 5, 6
     print('SEED: ', seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -269,15 +263,15 @@ def cppn(
         total_frames_left -= frames_per_sentence_left
 
         # For very first iteration, there's no last_vec to interpolate to
-        end_range = zs_length - 1  # tried pause_seconds
+        end_range = zs_length - 1
         if last_vec.any():
             range_list = range(-1, end_range)
         else:
-            range_list = range(0, end_range)  # TODO: ADD -1 to try. Along with inc frames per iter
+            range_list = range(0, end_range)
 
         # for each (roughly) second
         for j in range_list:
-            # Distribute frames per j iteration evenly as possible
+            # Distribute frames per j iteration as evenly as possible
             iterations_left = end_range - j
             frames_per_iter = round(frames_per_sentence_left / iterations_left)
 
@@ -286,21 +280,20 @@ def cppn(
             if j == -1:
                 z1 = last_vec
                 z2 = zs[0] * sentiment_scale
-                # frames_per_iter *= pause_seconds  # double frames  # TODO: added to try
+                # frames_per_iter *= pause_seconds  # make the interpolation last for the whole pause period
                 # j += 1
 
             else:
                 z1 = zs[j] * sentiment_scale
                 z2 = zs[j+1] * sentiment_scale
 
-            frames_per_sentence_left -= frames_per_iter  # moved this down from below
+            frames_per_sentence_left -= frames_per_iter
 
             images = latent_walk(
                 netG=netG,
                 z1=z1,
                 z2=z2,
-                # n_frames=interpolation,
-                n_frames=frames_per_iter - 2,  # latent_walk adds two frames
+                n_frames=frames_per_iter - 2,  # latent_walk() adds two frames
                 scale=scale,
                 batch_size=batch_size,
                 x_dim=x_dim,

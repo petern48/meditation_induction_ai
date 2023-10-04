@@ -4,16 +4,20 @@ import os
 
 from src import cppn
 from src.text_generation import text_generation
-from src.text_to_audio import text_to_speech, overlay_music_and_speech
+from src.text_to_audio import text_to_audio_and_sentiments
 
+
+meditation_types = ['mindful observation', 'body-centered', 'visual concentration', 'contemplation', 'affect-centered', 'mantra meditation', 'movement meditation']
 
 def load_args():
     parser = argparse.ArgumentParser(description='meditation_induction')
     # Non-default arguments
     parser.add_argument('--med_type', type=str,
-                        choices=['focused', 'body-scan', 'visualization', 'reflection', 'movement'],
-                        help="type of meditation: '[focused] [body-scan] [visualization] [reflection] [movement]")
+                        choices=meditation_types,
+                        help=f"types of meditation: {meditation_types}")
     # Default arguments
+    parser.add_argument('--fps', default=20, type=int,
+                        help='higher frames per second will generate more frames and take longer to generate')
     parser.add_argument('--script_file', type=str, default='',
                         help='input script to skip text generation, hence, there is no script generation')
     parser.add_argument('--accent', type=str, default='co.in',
@@ -28,8 +32,6 @@ def load_args():
                         help='out image height')
     parser.add_argument('--color_scheme', default='warm', type=str, choices=['warm', 'cool'],
                         help='(optional) warm or cool')
-    parser.add_argument('--no_music', action='store_true',
-                        help='(optional) skip background music')
     # Skip
     parser.add_argument('--skip_cppn_generation', action='store_true',
                         help='skip cppn generation')
@@ -56,6 +58,9 @@ def main():
     if args.script_file:
         with open(args.script_file, 'r') as f:
             script = f.read()
+        script_base_file_name = os.path.basename(args.script_file)
+        last_period_idx = script_base_file_name.rfind('.')
+        script_base_file_name = script_base_file_name[:last_period_idx]
         print('script_file provided, skipping text generation')
     else:
         meditation_types = ['focused', 'body-scan', 'visualization', 'reflection', 'movement']
@@ -86,34 +91,30 @@ def main():
     ##################
     # Text-to-speech #
     ##################
-    audio_filename = f"data/{args.med_type}_meditation_audio_{args.accent}.mp3"
+    if args.script_file:
+        base_name = script_base_file_name
+    else:
+        base_name = args.med_type
+
+    audio_filename = f"data/{base_name}_meditation_audio_{args.accent}.mp3"
 
     sr = 22050  # default librosa sample rate
     pause_seconds = 2.0
 
-    audio_segments, seconds_in_segments, sentiments, seconds = text_to_speech(
+    music_file = args.music_file
+    if args.skip_background_music:
+        music_file = None
+
+    # Apply sentiment analysis, create audio file and overlay background music
+    audio_segments, seconds_in_segments, sentiments, seconds = text_to_audio_and_sentiments(
         script,
         args.accent,
         audio_filename,
         sr,
         pause_seconds,
-        args.music_file
+        music_file
     )
 
-
-    # Adding background music    
-    if not args.skip_background_music:
-        # if not os.path.isfile(args.music_file):
-        #     raise Exception('Music file not found')
-        # audio_output_filename = f"data/{args.med_type}_meditation_audio_background_music.mp3"
-        # seconds = overlay_music_and_speech(
-        #     audio_filename,
-        #     args.music_file,
-        #     audio_output_filename
-        # )
-        audio_output_filename = audio_filename
-    else:
-        audio_output_filename = audio_filename
 
     # ####################
     # # Video generation #
@@ -134,13 +135,9 @@ def main():
         y_dim = args.y_dim
         color_scheme = args.color_scheme
 
-        fps = 25
-
-        print('Creating imgs using cppn')
+        print(f'Creating imgs using cppn for {args.fps} fps')
         frames_created = cppn.cppn(  # removed seconds
-            interpolation=inter,
             c_dim=args.channels,
-            # audio_file=audio_output_filename,
             scale=scale,
             trials_dir=trials_dir,
             x_dim=x_dim,
@@ -150,25 +147,23 @@ def main():
             sentiments=sentiments,
             seconds_in_segments=seconds_in_segments,
             sample_rate=sr,
-            fps=fps,
+            fps=args.fps,
             total_seconds=seconds,
             pause_seconds=int(pause_seconds)
         )
-        # fps = round(frames_created / seconds)
         print('TOTALFRAMES: ', frames_created)
         print('SECONDS: ', seconds)
-        # print('SECONDS OF VIDEO: ', frames_created / fps)
-        print('FPS: ', fps)
+        print('FPS: ', args.fps)
 
         # Compile imgs into video
         print('\nCompiling imgs into video')
-        os.system(f"ffmpeg -framerate {fps} -pattern_type glob -i '{trials_dir}/*.png' -pix_fmt yuv420p \
+        os.system(f"ffmpeg -framerate {args.fps} -pattern_type glob -i '{trials_dir}/*.png' -pix_fmt yuv420p \
                 -c:v libx264 -crf 23 {temp_file} -loglevel quiet")
 
         # Add audio to video
         print('Adding audio to video')
         output_filename = f"output/{args.med_type}_meditation_audio_background_music.mp4"
-        os.system(f'ffmpeg -i {temp_file} -i {audio_output_filename} -c:v copy -map 0:v -map 1:a \
+        os.system(f'ffmpeg -i {temp_file} -i {audio_filename} -c:v copy -map 0:v -map 1:a \
                 -y {output_filename} -loglevel quiet')
 
         os.system(f'rm {temp_file}')
