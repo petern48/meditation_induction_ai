@@ -32,6 +32,8 @@ def load_args():
                         help='out image height')
     parser.add_argument('--color_scheme', default='warm', type=str, choices=['warm', 'cool'],
                         help='(optional) warm or cool')
+    parser.add_argument('--show_ffmpeg_output', default=False, action='store_true',
+                        help='Show the ffmpeg output instead of supressing it. Good if it runs into some error.')
     # Skip
     parser.add_argument('--skip_cppn_generation', action='store_true',
                         help='skip cppn generation')
@@ -60,7 +62,7 @@ def main():
             script = f.read()
         script_base_file_name = os.path.basename(args.script_file)
         last_period_idx = script_base_file_name.rfind('.')
-        script_base_file_name = script_base_file_name[:last_period_idx]
+        script_base_file_name = script_base_file_name[:last_period_idx].replace(' ', '-')
         print('script_file provided, skipping text generation')
     else:
         meditation_types = ['focused', 'body-scan', 'visualization', 'reflection', 'movement']
@@ -75,6 +77,8 @@ def main():
             'movement': 'write me a movement meditation script designed to improve mind body connection, energy, vitality, and the systems of the body'
         }
         prompt = prompts[args.med_type]
+
+        args.med_type.replace(' ', '-')  # Remove the spaces from type
 
         ###################
         # Text generation #
@@ -116,9 +120,9 @@ def main():
     )
 
 
-    # ####################
-    # # Video generation #
-    # ####################
+    ####################
+    # Video generation #
+    ####################
     if not args.skip_cppn_generation:
 
         inter = 25
@@ -156,15 +160,21 @@ def main():
         print('FPS: ', args.fps)
 
         # Compile imgs into video
+
+        if args.show_ffmpeg_output:
+            quiet_output = ''
+        else:
+            quiet_output = ' -loglevel quiet'  # silences the output of ffmpeg cmds
+
         print('\nCompiling imgs into video')
         os.system(f"ffmpeg -framerate {args.fps} -pattern_type glob -i '{trials_dir}/*.png' -pix_fmt yuv420p \
-                -c:v libx264 -crf 23 {temp_file} -loglevel quiet")
+                -c:v libx264 -crf 23 {temp_file}{quiet_output}")
 
         # Add audio to video
         print('Adding audio to video')
-        output_filename = f"output/{args.med_type}_meditation_audio_background_music.mp4"
+        output_filename = f"output/{base_name}_meditation_audio_background_music.mp4"
         os.system(f'ffmpeg -i {temp_file} -i {audio_filename} -c:v copy -map 0:v -map 1:a \
-                -y {output_filename} -loglevel quiet')
+                -y {output_filename}{quiet_output}')
 
         os.system(f'rm {temp_file}')
 
