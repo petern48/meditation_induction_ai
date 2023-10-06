@@ -75,6 +75,9 @@ def main():
             raise Exception('Invalid input. Provide valid med_type or input own script. Exitting...')
 
 
+        # Get context input from user
+        print('''How are you feeling today.\nProvide context for your meditation (or press enter to skip): e.g I'm tired and I'm getting ready for bed.''')
+        context = input()
 
         # prompts = {
         #     'focused': 'write me a focused meditation script designed to enhance focus and attention by noticing all 5 senses',
@@ -84,8 +87,6 @@ def main():
         #     'movement': 'write me a movement meditation script designed to improve mind body connection, energy, vitality, and the systems of the body'
         # }
         # prompt = prompts[args.med_type]
-
-        context = input('Provide some context (optional): How are you feeling today?\n')
 
         prompt = get_prompt(args.med_type, context)
 
