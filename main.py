@@ -7,7 +7,7 @@ from src.text_generation import text_generation, get_prompt
 from src.text_to_audio import text_to_audio_and_sentiments
 
 
-meditation_types = ['mindful observation', 'body-centered', 'visual concentration', 'contemplation', 'affect-centered', 'mantra meditation', 'movement meditation']
+meditation_types = ['mindful-observation', 'body-centered', 'visual-concentration', 'contemplation', 'affect-centered', 'mantra-meditation', 'movement-meditation']
 
 
 def load_args():
@@ -79,10 +79,8 @@ def main():
         print('''How are you feeling today.\nProvide context for your meditation (or press enter to skip): e.g I'm tired and I'm getting ready for bed.''')
         context = input()
 
-        prompt = get_prompt(args.med_type, context)
+        prompt = get_prompt(args.med_type.replace('-', ' '), context)  # replace dash with space
 
-
-        args.med_type.replace(' ', '-')  # Remove the spaces from type
 
         ###################
         # Text generation #
@@ -101,10 +99,12 @@ def main():
     ##################
     if args.script_file:
         base_name = script_base_file_name
-    else:
-        base_name = args.med_type
+        audio_filename = base_name + f"-{args.accent}.mp3"
 
-    audio_filename = f"data/{base_name}_meditation_audio_{args.accent}.mp3"
+    else:
+        base_name = args.med_type + "-meditation_audio"
+        audio_filename = f"data/{args.med_type}-meditation-audio-{args.accent}.mp3"
+
 
     sr = 22050  # default librosa sample rate
     pause_seconds = 2.0
@@ -176,7 +176,7 @@ def main():
 
         # Add audio to video
         print('Adding audio to video')
-        output_filename = f"output/{base_name}_meditation_audio_background_music.mp4"
+        output_filename = f"output/{base_name}.mp4"
         os.system(f'ffmpeg -i {temp_file} -i {audio_filename} -c:v copy -map 0:v -map 1:a \
                 -y {output_filename}{quiet_output}')
 
