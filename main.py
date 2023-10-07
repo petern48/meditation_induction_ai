@@ -9,6 +9,7 @@ from src.text_to_audio import text_to_audio_and_sentiments
 
 meditation_types = ['mindful observation', 'body-centered', 'visual concentration', 'contemplation', 'affect-centered', 'mantra meditation', 'movement meditation']
 
+
 def load_args():
     parser = argparse.ArgumentParser(description='meditation_induction')
     # Non-default arguments
@@ -69,12 +70,6 @@ def main():
         script_base_file_name = script_base_file_name[:last_period_idx].replace(' ', '-')
         print('script_file provided, skipping text generation')
     else:
-        # meditation_types = ['focused', 'body-scan', 'visualization', 'reflection', 'movement']
-        meditation_types = ['mindful observation', 'body-centered meditation',
-                            'visual concentration', 'contemplation',
-                            'affect-centered meditation', 'mantra meditation',
-                            'movement meditation'
-        ]
 
         if args.med_type not in meditation_types:
             raise Exception('Invalid input. Provide valid med_type or input own script. Exitting...')
@@ -83,15 +78,6 @@ def main():
         # Get context input from user
         print('''How are you feeling today.\nProvide context for your meditation (or press enter to skip): e.g I'm tired and I'm getting ready for bed.''')
         context = input()
-
-        # prompts = {
-        #     'focused': 'write me a focused meditation script designed to enhance focus and attention by noticing all 5 senses',
-        #     'body-scan': 'write me a body scan meditation script to relax and relieve stress by tightening and relaxing muscles',
-        #     'visualization': 'write me a visualization meditation script noticing all 5 senses at the beach/garden and is designed to boost mood, reduce stress, and promote inner peace',
-        #     'reflection': 'write me a reflection meditation script designed to increase self awareness, mindfulness, and gratitude by asking the user about the current day and the recent past',
-        #     'movement': 'write me a movement meditation script designed to improve mind body connection, energy, vitality, and the systems of the body'
-        # }
-        # prompt = prompts[args.med_type]
 
         prompt = get_prompt(args.med_type, context)
 
