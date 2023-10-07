@@ -1,6 +1,6 @@
 <!-- ![Cool Image](/examples/color-scheme-images/cool-cppn-img.png) &nbsp; -->
 ![Blue Yellow Image](examples/color-scheme-images/blue-yellow.png) &nbsp;
-![Gif of Video](/examples/cppn.gif) &nbsp;
+![Gif of Video](/examples/cppn-video.gif) &nbsp;
 ![Red Orange Image](examples/color-scheme-images/red-orange.png) &nbsp;  
 <!-- ![Black White Image](examples/color-scheme-images/black-white.png) &nbsp;
 ![Blue Green Image](examples/color-scheme-images/blue-green.png) -->
