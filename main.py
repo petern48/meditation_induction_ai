@@ -129,8 +129,7 @@ def main():
     ####################
     if not args.skip_cppn_generation:
 
-        inter = 25
-        scale = 10  # 100
+        scale = 10
         temp_file = 'temp-file.mp4'
         trials_dir = 'data/trials'
 
