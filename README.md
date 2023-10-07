@@ -10,15 +10,16 @@ Change directory
 `cd meditation_induction_ai`
 
 #### Install packages
-Install the dependencies:
-`pipenv install`
-Activate the Python virtual environment:
+Install the dependencies:  
+`pipenv install`  
+Activate the Python virtual environment:  
 `pipenv shell`
 
 Activating the virtual environment allows you to work within an isolated environment where the dependencies you installed with pipenv install are available. This ensures that your project uses the correct versions of packages and avoids conflicts with system-wide packages.
 
-Also, it is necessary to install:
-`sudo apt install ffmpeg`
+Also, it is necessary to install:  
+`sudo apt install ffmpeg`  
+`pipenv run python -m nltk.downloader punkt vader_lexicon`
 
 ### Program Explanation
 Generate a meditation video with speech (and optionally music) using AI models.
