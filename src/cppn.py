@@ -278,7 +278,7 @@ def cppn(
         else:
             range_list = range(0, end_range)
 
-        # for each (roughly) second
+        # for each second (roughly)
         for j in range_list:
             # Distribute frames per j iteration as evenly as possible
             iterations_left = end_range - j
@@ -287,23 +287,22 @@ def cppn(
             interpolate_scale = None
 
 
-            # Interpolate between last_vec and 1st vec of this sentence during the pause
+            # Interpolate between the sentiment scale
             if j == -2:
                 z1 = last_vec
-                # z2 = zs[0] #* sentiment_scale
                 z2 = last_vec
+                interpolate_scale = last_scale
                 # frames_per_iter *= pause_seconds  # make the interpolation last for the whole pause period
                 # j += 1
-                interpolate_scale = last_scale
 
-            # TODO interpolate between last_vec and first vec
+            # Interpolate between last_vec and first vec
             elif j == -1:
                 z1 = last_vec
                 z2 = zs[0]
 
             else:
-                z1 = zs[j] #* sentiment_scale
-                z2 = zs[j+1] #* sentiment_scale
+                z1 = zs[j]
+                z2 = zs[j+1]
 
             frames_per_sentence_left -= frames_per_iter
 
