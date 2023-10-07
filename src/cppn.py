@@ -250,7 +250,7 @@ def cppn(
     # for each sentence
     for i in range(n_images):
         # sentiment_scale: range [0,2] scale up if positive. Scale down if negative.
-        sentiment_scale = sentiments[i] - 1
+        sentiment_scale = 1 + sentiments[i]
         zs = feature_extraction(audio_segments[i], z, sample_rate)
         zs_length = len(zs)
         seconds = seconds_in_segments[i]  # how long this sentence lasts in the audio
