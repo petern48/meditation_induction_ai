@@ -27,8 +27,10 @@ def text_to_audio_and_sentiments(meditation_script, accent, output_filename, sr,
     combined_audio = np.empty(0)
     seconds_in_segments = []
 
-    music1 = AudioSegment.from_mp3(music_file_path)
-    start_music = 0
+    if music_file_path != None:
+        music1 = AudioSegment.from_mp3(music_file_path)
+        start_music = 0
+
     for sentence in sentences:
         # Text to speech
         tts = gTTS(
