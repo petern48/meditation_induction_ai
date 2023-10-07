@@ -1,6 +1,11 @@
-![Cool Image](/examples/cool-cppn-img.png) &nbsp;
+<!-- ![Cool Image](/examples/color-scheme-images/cool-cppn-img.png) &nbsp; -->
+![Blue Yellow Image](examples/color-scheme-images/blue-yellow.png) &nbsp;
 ![Gif of Video](/examples/cppn.gif) &nbsp;
-![Warm Image](/examples/warm-cppn-img.png)]
+![Red Orange Image](examples/color-scheme-images/red-orange.png) &nbsp;  
+<!-- ![Black White Image](examples/color-scheme-images/black-white.png) &nbsp;
+![Blue Green Image](examples/color-scheme-images/blue-green.png) -->
+
+<!-- ![Warm Image](/examples/color-scheme-images/warm-cppn-img.png) -->
 
 
 # meditation_induction_ai
@@ -27,8 +32,9 @@ Text Generation: Generate a meditation script by specifying the desired type of 
 Text to Audio: Create speech for the text and (optionally add music) to it.
 Video Generation: Generate relaxing visuals by inputting audio into a Compositional Pattern Producing Network (CPPN)
 
-Select a type of meditation from the following list:
-[focused] [body-scan] [visualization] [reflection] [movement]
+Select a meditation type from the following list:  
+`['mindful-observation', 'body-centered', 'visual-concentration', 'contemplation', 'affect-centered', 'mantra-meditation', 'movement-meditation']`
+
 The program will generate a script for the meditation, feed that script to create audio, and feed that
 audio into the CPPN to generate a video. The video will come with the audio and (optional) music. 
 
