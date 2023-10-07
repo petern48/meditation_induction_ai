@@ -164,30 +164,6 @@ def latent_walk(
     return states  # Returns multiple imageio imgs
 
 
-# Old feature extraction function
-# def feature_extraction(file_path, num_mfcc, z):
-#     x, sample_rate = librosa.load(file_path, res_type='kaiser_fast')
-#     start = 0
-#     end = sample_rate
-#     t = len(x)
-#     seconds = round(len(x) / sample_rate)  # Seconds in the video
-#     features = np.empty(0, dtype=np.float32)
-#     while end <= t:
-#         segment = x[start: end]
-#         mfcc = np.mean(librosa.feature.mfcc(y=segment, sr=sample_rate, n_mfcc=num_mfcc).T, axis=0)
-#         mfcc = np.reshape(mfcc, (1, z))
-#         features = np.append(features, mfcc)
-#         start = end
-#         end += sample_rate  # move forward by one second
-#     features = np.reshape(features, (-1, z))
-
-#     # Normalize vector by dividing them all by their max value
-#     max_val = np.amax(np.abs(features))
-#     features /= max_val
-#     features = torch.from_numpy(features)
-#     return features, seconds
-
-
 def feature_extraction(audio_segment, z, sample_rate):
     """Extracts mfcc features from each second of the audio segment.
     Returns a list of these feature vectors"""
