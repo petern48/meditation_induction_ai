@@ -30,7 +30,7 @@ def load_args():
                         help='out image width')
     parser.add_argument('--y_dim', default=256, type=int,
                         help='out image height')
-    parser.add_argument('--color_scheme', default='warm', type=str, choices=['warm', 'cool'],
+    parser.add_argument('--color_scheme', default='warm', type=str, # choices=['warm', 'cool'],
                         help='(optional) warm or cool')
     parser.add_argument('--show_ffmpeg_output', default=False, action='store_true',
                         help='Show the ffmpeg output instead of supressing it. Good if it runs into some error.')
@@ -56,6 +56,10 @@ def main():
 
     if args.channels != 1 and args.channels != 3:
         print('Invalid number of channels. Must be (1) for black/white or (3) for RGB')
+
+    if args.color_scheme == 'low_body_low_activation':
+        args.channels = 1
+        args.color_scheme = False
 
     if args.script_file:
         with open(args.script_file, 'r') as f:

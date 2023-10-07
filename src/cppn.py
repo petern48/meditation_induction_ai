@@ -8,12 +8,9 @@ import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
+from src.color_scheme import apply_color_scheme
 
 logging.getLogger().setLevel(logging.ERROR)
-
-RED = 0
-GREEN = 1
-BLUE = 2
 
 
 class Generator(nn.Module):
@@ -74,20 +71,15 @@ class Generator(nn.Module):
 
         img = x.reshape(self.batch_size, self.y_dim, self.x_dim, self.c_dim)
 
+        # Scaled by 255
+        img *= 255
 
-        if self.color_scheme == 'warm':
-            # Reduce the green and blue values
-            img[:, :, :, RED] *= 1.3
-            img[:, :, :, GREEN] *= 1.0
-            img[:, :, :, BLUE] *= 0.7
-        elif self.color_scheme == 'cool':
-            img[:, :, :, RED] *= 0.7
-            img[:, :, :, GREEN] *= 1.0
-            img[:, :, :, BLUE] *= 1.3
-        else:
-            raise Exception("Invalid Color Scheme. Exiting...")
+        if self.color_scheme:
+            img = apply_color_scheme(img, self.color_scheme)
 
-        img[img > 1] = 1
+        # Ensure values are under 255
+        img[img > 255] = 255
+
         return img
 
 
