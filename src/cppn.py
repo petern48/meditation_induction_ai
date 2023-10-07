@@ -319,7 +319,6 @@ def cppn(
                 save_fn = f'{trials_dir}/./{suff}_{str(frames_created).zfill(7)}'
                 imwrite(save_fn+'.png', img)  # imageio function
                 frames_created += 1
-                return frames_created
         print('walked {}/{}'.format(i+1, n_images))
 
 
