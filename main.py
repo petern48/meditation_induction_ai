@@ -99,7 +99,7 @@ def main():
     ##################
     if args.script_file:
         base_name = script_base_file_name
-        audio_filename = base_name + f"-{args.accent}.mp3"
+        audio_filename = f"data/{base_name}-{args.accent}.mp3"
 
     else:
         base_name = args.med_type + "-meditation_audio"
