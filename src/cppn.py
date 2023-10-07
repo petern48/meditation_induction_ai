@@ -167,7 +167,7 @@ def latent_walk(
                 z=z,
                 x_dim=x_dim,
                 y_dim=y_dim,
-            )[0] * 255  # scale up to rgb values
+            )[0] # * 255  # scale up to rgb values
         )
     states = torch.stack(states).detach().numpy()  # concatenates elements in list to a torch tensor
     return states  # Returns multiple imageio imgs
@@ -319,6 +319,7 @@ def cppn(
                 save_fn = f'{trials_dir}/./{suff}_{str(frames_created).zfill(7)}'
                 imwrite(save_fn+'.png', img)  # imageio function
                 frames_created += 1
+                return frames_created
         print('walked {}/{}'.format(i+1, n_images))
 
 
