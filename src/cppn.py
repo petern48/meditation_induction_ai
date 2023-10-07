@@ -147,21 +147,30 @@ def latent_walk(
     z1,
     z2,
     n_frames,
-    scale,
+    scale,  # new_scale
     batch_size,
     x_dim,
     y_dim,
+    interpolate_scale  # last_scale
 ):
-    delta = (z2 - z1) / (n_frames + 1)
+    if interpolate_scale == None:
+        delta = (z2 - z1) / (n_frames + 1)
+    else:
+        delta_scale = (scale - interpolate_scale) / (n_frames + 1)
     total_frames = n_frames + 2  # plus 2 for the starting and ending points
 
     states = []
+    curr_scale = scale
+    z = z1
     for i in range(total_frames):
-        z = z1 + delta * float(i)
+        if interpolate_scale == None:
+            z = z1 + delta * float(i)
+        else:
+            curr_scale = interpolate_scale + delta_scale * float(i)
         states.append(
             sample(
                 netG=netG,
-                scale=scale,
+                scale=curr_scale,
                 batch_size=batch_size,
                 z=z,
                 x_dim=x_dim,
@@ -265,7 +274,7 @@ def cppn(
         # For very first iteration, there's no last_vec to interpolate to
         end_range = zs_length - 1
         if last_vec.any():
-            range_list = range(-1, end_range)
+            range_list = range(-2, end_range)  # -1
         else:
             range_list = range(0, end_range)
 
@@ -274,18 +283,27 @@ def cppn(
             # Distribute frames per j iteration as evenly as possible
             iterations_left = end_range - j
             frames_per_iter = round(frames_per_sentence_left / iterations_left)
+            new_scale = scale * sentiment_scale
+            interpolate_scale = None
 
 
             # Interpolate between last_vec and 1st vec of this sentence during the pause
-            if j == -1:
+            if j == -2:
                 z1 = last_vec
-                z2 = zs[0] * sentiment_scale
+                # z2 = zs[0] #* sentiment_scale
+                z2 = last_vec
                 # frames_per_iter *= pause_seconds  # make the interpolation last for the whole pause period
                 # j += 1
+                interpolate_scale = last_scale
+
+            # TODO interpolate between last_vec and first vec
+            elif j == -1:
+                z1 = last_vec
+                z2 = zs[0]
 
             else:
-                z1 = zs[j] * sentiment_scale
-                z2 = zs[j+1] * sentiment_scale
+                z1 = zs[j] #* sentiment_scale
+                z2 = zs[j+1] #* sentiment_scale
 
             frames_per_sentence_left -= frames_per_iter
 
@@ -294,14 +312,16 @@ def cppn(
                 z1=z1,
                 z2=z2,
                 n_frames=frames_per_iter - 2,  # latent_walk() adds two frames
-                scale=scale,
+                scale=new_scale,
                 batch_size=batch_size,
                 x_dim=x_dim,
                 y_dim=y_dim,
+                interpolate_scale=interpolate_scale  # value of last scale
             )
 
             if j+1 not in range_list:
                 last_vec = z2
+                last_scale = new_scale
 
             for img in images:
                 # Pad with zeros to ensure pictures are in proper order
