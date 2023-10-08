@@ -52,7 +52,7 @@ def load_args():
 def main():
     # Load Arguments and check if valid
     args = load_args()
-    
+
     # Creating data and output folders if not exist
     if not os.path.exists('data'):
         os.makedirs('data')
@@ -74,17 +74,14 @@ def main():
         script_base_file_name = script_base_file_name[:last_period_idx].replace(' ', '-')
         print('script_file provided, skipping text generation')
     else:
-
         if args.med_type not in meditation_types:
             raise Exception('Invalid input. Provide valid med_type or input own script. Exitting...')
-
 
         # Get context input from user
         print('''How are you feeling today.\nProvide context for your meditation (or press enter to skip): e.g I'm tired and I'm getting ready for bed.''')
         context = input()
 
         prompt = get_prompt(args.med_type.replace('-', ' '), context)  # replace dash with space
-
 
         ###################
         # Text generation #
@@ -109,7 +106,6 @@ def main():
         base_name = args.med_type + "-meditation_audio"
         audio_filename = f"data/{args.med_type}-meditation-audio-{args.accent}.mp3"
 
-
     sr = 22050  # default librosa sample rate
     pause_seconds = 2.0
 
@@ -126,7 +122,6 @@ def main():
         pause_seconds,
         music_file
     )
-
 
     ####################
     # Video generation #
