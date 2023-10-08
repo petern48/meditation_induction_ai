@@ -1,5 +1,4 @@
 import os
-import sys
 
 from imageio import imwrite
 import librosa
@@ -25,9 +24,9 @@ class Generator(nn.Module):
         y_dim,
         c_dim,
     ):
-        super(Generator, self).__init__()        
+        super(Generator, self).__init__()
 
-        self.net = net        
+        self.net = net
         self.batch_size = batch_size
         self.color_scheme = color_scheme
 
@@ -36,7 +35,7 @@ class Generator(nn.Module):
 
         # Multiplier on z
         self.scale = scale
-        
+
         # Output image [x_dim: width, y_dim: height, c_dim: channels]
         self.x_dim = x_dim
         self.y_dim = y_dim
@@ -119,7 +118,7 @@ def sample(
         batch_size=batch_size,
         scale=scale,
         x_dim=x_dim,
-        y_dim=y_dim,                      
+        y_dim=y_dim,
     )
     image = netG((x_vec, y_vec, z, r_vec))
     return image
@@ -145,7 +144,7 @@ def latent_walk(
     y_dim,
     interpolate_scale  # last_scale
 ):
-    if interpolate_scale == None:
+    if interpolate_scale is None:
         delta = (z2 - z1) / (n_frames + 1)
     else:
         delta_scale = (scale - interpolate_scale) / (n_frames + 1)
@@ -155,7 +154,7 @@ def latent_walk(
     curr_scale = scale
     z = z1
     for i in range(total_frames):
-        if interpolate_scale == None:
+        if interpolate_scale is None:
             z = z1 + delta * float(i)
         else:
             curr_scale = interpolate_scale + delta_scale * float(i)
@@ -167,7 +166,7 @@ def latent_walk(
                 z=z,
                 x_dim=x_dim,
                 y_dim=y_dim,
-            )[0] # * 255  # scale up to rgb values
+            )[0]  # * 255  # scale up to rgb values
         )
     states = torch.stack(states).detach().numpy()  # concatenates elements in list to a torch tensor
     return states  # Returns multiple imageio imgs
@@ -193,9 +192,8 @@ def feature_extraction(audio_segment, z, sample_rate):
     max_val = np.amax(np.abs(features))
     features /= max_val
     features = torch.from_numpy(features)
-
-
     features = np.reshape(features, (-1, z))
+
     return features
 
 
@@ -240,7 +238,6 @@ def cppn(
         c_dim=c_dim,
     ))
 
-
     frames_created = 0
     n_images = len(audio_segments)
 
@@ -278,20 +275,15 @@ def cppn(
             new_scale = scale * sentiment_scale
             interpolate_scale = None
 
-
-            # Interpolate between the sentiment scale
             if j == -2:
+                # Interpolate between the sentiment scale
                 z1 = last_vec
                 z2 = last_vec
-                interpolate_scale = last_scale
-                # frames_per_iter *= pause_seconds  # make the interpolation last for the whole pause period
-                # j += 1
-
-            # Interpolate between last_vec and first vec
+                interpolate_scale = new_scale
             elif j == -1:
+                # Interpolate between last_vec and first vec
                 z1 = last_vec
                 z2 = zs[0]
-
             else:
                 z1 = zs[j]
                 z2 = zs[j+1]
@@ -312,7 +304,6 @@ def cppn(
 
             if j+1 not in range_list:
                 last_vec = z2
-                last_scale = new_scale
 
             for img in images:
                 # Pad with zeros to ensure pictures are in proper order
@@ -320,6 +311,5 @@ def cppn(
                 imwrite(save_fn+'.png', img)  # imageio function
                 frames_created += 1
         print('walked {}/{}'.format(i+1, n_images))
-
 
     return frames_created
