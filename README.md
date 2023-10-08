@@ -5,10 +5,6 @@
 ![Program Structure Diagram](assets/meditation-induction-diagram.png) &nbsp;
 ![Blue Green Image](examples/color-scheme-images/blue-green-small.png)
 
-<!-- ![Cool Image](/examples/color-scheme-images/cool-cppn-img.png) &nbsp; -->
-<!-- ![Warm Image](/examples/color-scheme-images/warm-cppn-img.png) -->
-
-
 # meditation_induction_ai
 Clone the repo  
 `git clone https://github.com/petern48/meditation_induction_ai.git`  
