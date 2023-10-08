@@ -1,19 +1,28 @@
-from gtts import gTTS
-import math
 import os
-from pydub import AudioSegment
+
+from gtts import gTTS
+import librosa
 import nltk
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
-import librosa
-import soundfile as sf
 import numpy as np
+from pydub import AudioSegment
+import soundfile as sf
+
+ACCENT_OPTIONS = ['com.au', 'co.uk', 'us', 'ca', 'co.in', 'ie', 'co.za']
 
 
-def text_to_audio_and_sentiments(meditation_script, accent, output_filename, sr, pause_seconds, music_file_path=None):
+def text_to_audio_and_sentiments(
+    meditation_script,
+    accent,
+    output_filename,
+    sr,
+    pause_seconds,
+    music_file_path=None
+):
     """Generates audio file given using gTTS library"""
 
     # List of accents available in gTTS
-    if accent not in ['com.au', 'co.uk', 'us', 'ca', 'co.in', 'ie', 'co.za']:
+    if accent not in ACCENT_OPTIONS:
         raise Exception('Invalid accent')
 
     audio_segments = []  # List of separate audio arrays
@@ -27,7 +36,7 @@ def text_to_audio_and_sentiments(meditation_script, accent, output_filename, sr,
     combined_audio = np.empty(0)
     seconds_in_segments = []
 
-    if music_file_path != None:
+    if music_file_path is not None:
         music1 = AudioSegment.from_mp3(music_file_path)
         start_music = 0
 
@@ -41,11 +50,10 @@ def text_to_audio_and_sentiments(meditation_script, accent, output_filename, sr,
         )
         tts.save(temp_file)
 
-
         temp_audio = AudioSegment.from_mp3(temp_file)
         # Add longer pause after every sentence
-        temp_audio += AudioSegment.silent(duration= pause_seconds * 1000)
-        if music_file_path != None:
+        temp_audio += AudioSegment.silent(duration=pause_seconds*1000)
+        if music_file_path is not None:
             end_music = overlay_music_and_speech(temp_audio, music1, start_music, temp_file)
             start_music = end_music
 
@@ -83,11 +91,10 @@ def overlay_music_and_speech(speech_audio, music_audio, start_idx, filename):
     # Make music wrap around to the beginning
     else:
         second_end = speech_duration - (length_music-1 - start_idx)
-        specific_audio = music_audio[start_idx:length_music - 1] + \
-        music_audio[0:second_end]
+        specific_audio = music_audio[start_idx:length_music - 1] + music_audio[0: second_end]
         end_idx = second_end  # for return value
 
-    assert(len(speech_audio) == len(specific_audio))
+    assert len(speech_audio) == len(specific_audio)
 
     combined = speech_audio.overlay(specific_audio)
     combined.export(filename, format="mp3")

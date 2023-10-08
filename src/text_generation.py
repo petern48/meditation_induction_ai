@@ -1,11 +1,14 @@
+import os
+import re
+
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from typing import Dict
-import re
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 MODEL_NAME = 'NousResearch/Llama-2-7b-chat-hf'
 DEFAULT_MAX_LENGTH = 128
-
 GOALS = {
     'mindful observation': 'emphasizes the practice of mindfully observing oneself in a state of stillness, which includes lying meditation, sitting in silence, and observing thoughts and emotions.',
     'body-centered meditation': 'focuses on heightened awareness of the body, breath, and sensory perceptions, sometimes involving concentration on specific body locations or energy centers.',

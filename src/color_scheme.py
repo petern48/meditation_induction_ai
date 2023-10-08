@@ -1,5 +1,3 @@
-import torch
-
 RED = 0
 GREEN = 1
 BLUE = 2
@@ -52,8 +50,9 @@ def apply_color_scheme(img, color_scheme):
         blue_mask = (blue_channel > green_channel)
         green_mask = ~blue_mask
 
-        red_channel[red_channel<80] = 80
-        green_channel[green_channel<80] = 80
+        red_channel[red_channel < 80] = 80
+        green_channel[green_channel < 80] = 80
+
         # Electric Blue: Set blue and green equal
         blue_channel[blue_mask] = green_channel[blue_mask]
         red_channel[blue_mask] = 0
@@ -61,18 +60,6 @@ def apply_color_scheme(img, color_scheme):
         # Places with more green turn to yellow
         green_channel[green_mask] = red_channel[green_mask]
         blue_channel[green_mask] = 0
-
-        # green_channel[red_mask] = red_channel[red_mask]
-
-        # Set blue and green equal to get yellow
-        # median_rgb = torch.median(img, axis=3).values.to(torch.float32).expand_as(blue_channel)
-
-    # Already set c_dim to 1
-    # elif color_scheme == LOW_B_LOW_A:  # instead just set c_dim to 1
-    #     # target gray
-    #     # set all the rgb values to the median rgb value
-    #     median_rgb = torch.median(img, axis=3).values.to(torch.float32)
-    #     img = median_rgb.unsqueeze(3).expand_as(img)
 
     else:
         raise Exception("Invalid Color Scheme. Exiting...")

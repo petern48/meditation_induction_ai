@@ -7,24 +7,24 @@ from src.text_generation import text_generation, get_prompt
 from src.text_to_audio import text_to_audio_and_sentiments
 
 
-meditation_types = ['mindful-observation', 'body-centered', 'visual-concentration', 'contemplation', 'affect-centered', 'mantra-meditation', 'movement-meditation']
-accent_options = ['com.au', 'co.uk', 'us', 'ca', 'co.in', 'ie', 'co.za']
-color_schemes = ['red-orange', 'blue-green', 'blue-yellow', 'black-white', 'warm', 'cool']
+MEDITATION_TYPES = ['mindful-observation', 'body-centered', 'visual-concentration', 'contemplation', 'affect-centered', 'mantra-meditation', 'movement-meditation']
+ACCENT_OPTIONS = ['com.au', 'co.uk', 'us', 'ca', 'co.in', 'ie', 'co.za']
+COLOR_SCHEMAS = ['red-orange', 'blue-green', 'blue-yellow', 'black-white', 'warm', 'cool']
 
 
 def load_args():
     parser = argparse.ArgumentParser(description='meditation_induction')
     # Non-default arguments
     parser.add_argument('--med_type', type=str,
-                        choices=meditation_types,
-                        help=f"types of meditation: {meditation_types}")
+                        choices=MEDITATION_TYPES,
+                        help=f"types of meditation: {MEDITATION_TYPES}")
     # Default arguments
     parser.add_argument('--fps', default=20, type=int,
                         help='higher frames per second will generate more frames and take longer to generate')
     parser.add_argument('--script_file', type=str, default='',
                         help='input script to skip text generation, hence, there is no script generation')
     parser.add_argument('--accent', type=str, default='co.in',
-                        choices=accent_options,
+                        choices=ACCENT_OPTIONS,
                         help="Select one: ['com.au', 'co.uk', 'us', 'ca', 'co.in', 'ie', 'co.za']")
     parser.add_argument('--music_file', default='assets/default_background_music.mp3', type=str,
                         help='background music')
@@ -35,7 +35,7 @@ def load_args():
     parser.add_argument('--y_dim', default=256, type=int,
                         help='out image height')
     parser.add_argument('--color_scheme', default='', type=str,
-                        choices=color_schemes,
+                        choices=COLOR_SCHEMAS,
                         help="Select one: ['red-orange', 'blue-green', 'blue-yellow', 'black-white', 'warm', 'cool']")
     parser.add_argument('--show_ffmpeg_output', default=False, action='store_true',
                         help='Show the ffmpeg output instead of supressing it. Good if it runs into some error.')
@@ -60,11 +60,13 @@ def main():
         os.makedirs('output')
 
     if args.channels != 1 and args.channels != 3:
-        print('Invalid number of channels. Must be (1) for black/white or (3) for RGB')
+        raise Exception('Invalid number of channels. Must be (1) for black/white or (3) for RGB')
 
     if args.color_scheme == 'black-white':
         args.channels = 1
         args.color_scheme = False
+    else:
+        args.channels = 3
 
     if args.script_file:
         with open(args.script_file, 'r') as f:
@@ -74,11 +76,11 @@ def main():
         script_base_file_name = script_base_file_name[:last_period_idx].replace(' ', '-')
         print('script_file provided, skipping text generation')
     else:
-        if args.med_type not in meditation_types:
+        if args.med_type not in MEDITATION_TYPES:
             raise Exception('Invalid input. Provide valid med_type or input own script. Exitting...')
 
         # Get context input from user
-        print('''How are you feeling today.\nProvide context for your meditation (or press enter to skip): e.g I'm tired and I'm getting ready for bed.''')
+        print("How are you feeling today.\nProvide context for your meditation (or press enter to skip): e.g I'm tired and I'm getting ready for bed.")
         context = input()
 
         prompt = get_prompt(args.med_type.replace('-', ' '), context)  # replace dash with space
