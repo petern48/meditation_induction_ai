@@ -8,6 +8,8 @@ from src.text_to_audio import text_to_audio_and_sentiments
 
 
 meditation_types = ['mindful-observation', 'body-centered', 'visual-concentration', 'contemplation', 'affect-centered', 'mantra-meditation', 'movement-meditation']
+accent_options = ['com.au', 'co.uk', 'us', 'ca', 'co.in', 'ie', 'co.za']
+color_schemes = ['red-orange', 'blue-green', 'blue-yellow', 'black-white', 'warm', 'cool']
 
 
 def load_args():
@@ -22,7 +24,8 @@ def load_args():
     parser.add_argument('--script_file', type=str, default='',
                         help='input script to skip text generation, hence, there is no script generation')
     parser.add_argument('--accent', type=str, default='co.in',
-                        help='[com.au] [co.uk] [us] [ca] [co.in] [ie] [co.za]')
+                        choices=accent_options,
+                        help="Select one: ['com.au', 'co.uk', 'us', 'ca', 'co.in', 'ie', 'co.za']")
     parser.add_argument('--music_file', default='assets/default_background_music.mp3', type=str,
                         help='background music')
     parser.add_argument('--channels', type=int, default=3, choices=[1, 3],
@@ -31,8 +34,9 @@ def load_args():
                         help='out image width')
     parser.add_argument('--y_dim', default=256, type=int,
                         help='out image height')
-    parser.add_argument('--color_scheme', default='warm', type=str, # choices=['warm', 'cool'],
-                        help='(optional) warm or cool')
+    parser.add_argument('--color_scheme', default='', type=str,
+                        choices=color_schemes,
+                        help="Select one: ['red-orange', 'blue-green', 'blue-yellow', 'black-white', 'warm', 'cool']")
     parser.add_argument('--show_ffmpeg_output', default=False, action='store_true',
                         help='Show the ffmpeg output instead of supressing it. Good if it runs into some error.')
     # Skip
@@ -58,7 +62,7 @@ def main():
     if args.channels != 1 and args.channels != 3:
         print('Invalid number of channels. Must be (1) for black/white or (3) for RGB')
 
-    if args.color_scheme == 'low_body_low_activation':
+    if args.color_scheme == 'black-white':
         args.channels = 1
         args.color_scheme = False
 
