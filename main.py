@@ -4,7 +4,7 @@ import os
 
 from src import cppn
 from src.text_generation import text_generation, get_prompt
-from src.text_to_audio import text_to_audio_and_sentiments
+from src.text_to_speech import text_to_audio_and_sentiments
 
 
 MEDITATION_TYPES = ['mindful-observation', 'body-centered', 'visual-concentration', 'contemplation', 'affect-centered', 'mantra-meditation', 'movement-meditation']
