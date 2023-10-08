@@ -37,7 +37,7 @@ def text_to_audio_and_sentiments(
     seconds_in_segments = []
 
     if music_file_path is not None:
-        music1 = AudioSegment.from_mp3(music_file_path)
+        music_audio = AudioSegment.from_mp3(music_file_path)
         start_music = 0
 
     for sentence in sentences:
@@ -54,7 +54,7 @@ def text_to_audio_and_sentiments(
         # Add longer pause after every sentence
         temp_audio += AudioSegment.silent(duration=pause_seconds*1000)
         if music_file_path is not None:
-            end_music = overlay_music_and_speech(temp_audio, music1, start_music, temp_file)
+            end_music = overlay_music_and_speech(temp_audio, music_audio, start_music, temp_file)
             start_music = end_music
 
         # Convert to librosa arrays to prepare for audio feature extraction
