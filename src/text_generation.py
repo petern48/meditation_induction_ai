@@ -11,12 +11,12 @@ MODEL_NAME = 'NousResearch/Llama-2-7b-chat-hf'
 DEFAULT_MAX_LENGTH = 128
 GOALS = {
     'mindful observation': 'emphasizes the practice of mindfully observing oneself in a state of stillness, which includes lying meditation, sitting in silence, and observing thoughts and emotions.',
-    'body-centered meditation': 'focuses on heightened awareness of the body, breath, and sensory perceptions, sometimes involving concentration on specific body locations or energy centers.',
+    'body centered': 'focuses on heightened awareness of the body, breath, and sensory perceptions, sometimes involving concentration on specific body locations or energy centers.',
     'visual concentration': 'involves techniques like visualizations and concentration on visual objects to achieve a centered state of mind.',
     'contemplation': 'encourages deep reflection on contradictions, paradoxes, or spiritual questions.',
-    'affect-centered meditation': 'encompasses practices that cultivate positive emotions such as compassion, loving-kindness, and equanimity.',
-    'mantra meditation': 'involves the repetitive use of syllables, words, or phrases, often with sounds and mantras, to facilitate meditation.',
-    'movement meditation': 'combines mindfulness with physical activity, including manipulating the breath, walking, and sensory observation.'
+    'affect centered': 'encompasses practices that cultivate positive emotions such as compassion, loving-kindness, and equanimity.',
+    'mantra': 'involves the repetitive use of syllables, words, or phrases, often with sounds and mantras, to facilitate meditation.',
+    'movement': 'combines mindfulness with physical activity, including manipulating the breath, walking, and sensory observation.'
 }
 
 

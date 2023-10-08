@@ -7,7 +7,7 @@ from src.text_generation import text_generation, get_prompt
 from src.text_to_speech import text_to_audio_and_sentiments
 
 
-MEDITATION_TYPES = ['mindful-observation', 'body-centered', 'visual-concentration', 'contemplation', 'affect-centered', 'mantra-meditation', 'movement-meditation']
+MEDITATION_TYPES = ['mindful-observation', 'body-centered', 'visual-concentration', 'contemplation', 'affect-centered', 'mantra', 'movement']
 ACCENT_OPTIONS = ['com.au', 'co.uk', 'us', 'ca', 'co.in', 'ie', 'co.za']
 COLOR_SCHEMAS = ['red-orange', 'blue-green', 'blue-yellow', 'black-white', 'warm', 'cool']
 
