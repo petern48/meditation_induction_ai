@@ -87,6 +87,6 @@ Options: ['red-orange', 'blue-green', 'blue-yellow', 'black-white', 'warm', 'coo
 ### References
 CPPN model based on https://github.com/neale/CPPN
 
-Inspiration taken from the following articles:
+Inspiration taken from the following articles:  
 https://nenadmarkus.com/p/visualizing-audio-with-cppns/  
 https://blog.otoro.net/2016/03/25/generating-abstract-patterns-with-tensorflow/
