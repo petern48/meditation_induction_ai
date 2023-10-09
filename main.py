@@ -25,7 +25,7 @@ def load_args():
                         help='input script to skip text generation, hence, there is no script generation')
     parser.add_argument('--accent', type=str, default='co.in',
                         choices=ACCENT_OPTIONS,
-                        help="Select one: ['com.au', 'co.uk', 'us', 'ca', 'co.in', 'ie', 'co.za']")
+                        help=f"Select one: {ACCENT_OPTIONS}")
     parser.add_argument('--music_file', default='assets/default_background_music.mp3', type=str,
                         help='background music')
     parser.add_argument('--channels', type=int, default=3, choices=[1, 3],
@@ -36,7 +36,7 @@ def load_args():
                         help='out image height')
     parser.add_argument('--color_scheme', default='', type=str,
                         choices=COLOR_SCHEMAS,
-                        help="Select one: ['red-orange', 'blue-green', 'blue-yellow', 'black-white', 'warm', 'cool']")
+                        help=f"Select one: {COLOR_SCHEMAS}")
     parser.add_argument('--show_ffmpeg_output', default=False, action='store_true',
                         help='Show the ffmpeg output instead of supressing it. Good if it runs into some error.')
     # Skip
