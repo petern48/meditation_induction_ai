@@ -279,7 +279,7 @@ def cppn(
                 # Interpolate between the sentiment scale
                 z1 = last_vec
                 z2 = last_vec
-                interpolate_scale = new_scale
+                interpolate_scale = last_scale
             elif j == -1:
                 # Interpolate between last_vec and first vec
                 z1 = last_vec
@@ -304,6 +304,7 @@ def cppn(
 
             if j+1 not in range_list:
                 last_vec = z2
+                last_scale = new_scale
 
             for img in images:
                 # Pad with zeros to ensure pictures are in proper order
