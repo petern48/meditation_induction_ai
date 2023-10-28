@@ -283,10 +283,10 @@ def cppn(
             elif j == -1:
                 # Interpolate between last_vec and first vec
                 z1 = last_vec
-                z2 = zs[0]
+                z2 = zs[0] * sentiment_scale
             else:
-                z1 = zs[j]
-                z2 = zs[j+1]
+                z1 = zs[j] * sentiment_scale
+                z2 = zs[j+1] * sentiment_scale
 
             frames_per_sentence_left -= frames_per_iter
 
