@@ -220,7 +220,7 @@ def cppn(
     if not os.path.exists(trials_dir):
         os.makedirs(trials_dir)
 
-    z = 8
+    z = 128
     n_images = 1
     net = 32
     batch_size = 1
