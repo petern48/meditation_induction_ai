@@ -1,5 +1,5 @@
 ![Blue Yellow Image](examples/color-scheme-images/blue-yellow.png) &nbsp;
-![Gif of Video](/examples/cppn-video.gif) &nbsp;
+![Gif of Video](examples/cppn-video.gif) &nbsp;
 ![Red Orange Image](examples/color-scheme-images/red-orange.png) &nbsp;  
 ![Black White Image](examples/color-scheme-images/black-white-small.png) &nbsp;
 ![Program Structure Diagram](assets/meditation-induction-diagram.png) &nbsp;
