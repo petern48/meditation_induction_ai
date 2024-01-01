@@ -44,6 +44,8 @@ def load_args():
                         help='skip cppn generation')
     parser.add_argument('--skip_background_music', action='store_true',
                         help='skip background music')
+    parser.add_argument("--seed", default=None, type=int,
+                        help="seed for consistent video frames output")
 
     args = parser.parse_args()
     return args
@@ -157,7 +159,8 @@ def main():
             sample_rate=sr,
             fps=args.fps,
             total_seconds=seconds,
-            pause_seconds=int(pause_seconds)
+            pause_seconds=int(pause_seconds),
+            seed=args.seed
         )
         print('TOTALFRAMES: ', frames_created)
         print('SECONDS: ', seconds)

@@ -210,9 +210,11 @@ def cppn(
     sample_rate,
     fps,
     total_seconds,
-    pause_seconds
+    pause_seconds,
+    seed
 ):
-    seed = np.random.randint(16)
+    if seed is None:
+        seed = np.random.randint(16)
     print('SEED: ', seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
