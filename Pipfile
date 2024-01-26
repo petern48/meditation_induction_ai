@@ -21,6 +21,7 @@ imageio = "==2.19.3"
 resampy = "==0.4.2"
 nltk = "==3.8.1"
 urllib3 = "*"
+pillow = "==10.2.0"
 
 [dev-packages]
 
