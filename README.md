@@ -6,6 +6,9 @@
 ![Blue Green Image](examples/color-scheme-images/blue-green-small.png)
 
 # meditation_induction_ai
+
+Source Code for the following paper presented at EvoMUSART 2024: [ AI-Driven Meditation: Personalization for Inner Peace](https://link.springer.com/chapter/10.1007/978-3-031-56992-0_19)
+
 Clone the repo  
 `git clone https://github.com/petern48/meditation_induction_ai.git`  
 Change directory  
